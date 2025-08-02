@@ -361,7 +361,7 @@ class CreateNewChurchMember extends Page
                                         ->options(function(){
                                             $church_district_id = Church::where('id', auth()->user()->church_id)->pluck('church_district_id');
                                             $diocese_id = ChurchDistrict::whereIn('id', $church_district_id)->pluck('diocese_id');
-                                            $regions = Diocese::whereIn('id', $diocese_id)->pluck('regions');
+                                            $regions = Diocese::whereIn('id', $diocese_id)->pluck('regions')->collapse();
 
                                             return Region::whereIn('name', $regions)->pluck('name', 'id');
                                         })
