@@ -34,7 +34,8 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Support\Exceptions\Halt;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\Church;
+use App\Models\ChurchDistrict;
 
 class CreateNewChurchMember extends Page
 {    
