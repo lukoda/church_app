@@ -96,7 +96,7 @@ class Members extends Page
                         return "Registration Complete";
                     }
                 }else{
-                    return "You haven't pledged yet, Please enter card pledges";
+                    return "Please enter your annual pledges";
                 }
             }else{
                 return "Please Complete Registration";
@@ -152,13 +152,13 @@ class Members extends Page
     {
         return [
             EditAction::make()
-                ->label('Edit Church Member')
+                ->label('Edit Details')
                 ->record(ChurchMember::where('user_id', auth()->user()->id)->first())
                 ->form([
                         Wizard::make()
                         ->columnSpanFull()
                         ->steps([
-                            Step::make('Personal Information')
+                            Step::make('Person Details')
                                 ->columns(3)
                                 ->schema([
 
@@ -231,6 +231,8 @@ class Members extends Page
                                             }
                                         }),
 
+                                    Checkbox::make('has_dependants')->inline(false)->live(),
+
                                     Repeater::make('dependants')
                                         ->relationship('dependants')
                                         ->schema([
@@ -296,6 +298,7 @@ class Members extends Page
                                         ->addActionLabel('Add Dependants')
                                         ->columnSpan('full')
                                         ->columns(4)
+                                        ->hidden(fn (Get $get): bool => ! $get('has_dependants'))
 
                                     ]),
 
@@ -304,8 +307,9 @@ class Members extends Page
                                 ->schema([
                                     Select::make('identification_type')
                                         ->options([
-                                            'nida' => 'Nida',
-                                            'passport' => 'passport'
+                                            'nida' => 'NIDA',
+                                            'passport' => 'Passport',
+                                            'driving_license' => 'Driving License'
                                         ])
                                         ->reactive(),
 
@@ -336,7 +340,7 @@ class Members extends Page
                                         ->columnSpan('full'),
                                     ]),
 
-                            Step::make('Address Details')
+                            Step::make('Physical Address')
                                 ->schema([
                                 Grid::make(3)
                                     ->schema([

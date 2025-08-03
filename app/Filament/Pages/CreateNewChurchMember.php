@@ -127,7 +127,7 @@ class CreateNewChurchMember extends Page
                     Wizard::make()
                     ->columnSpanFull()
                     ->steps([
-                        Step::make('Personal Information')
+                        Step::make('Person Details')
                             ->columns(3)
                             ->schema([
 
@@ -203,6 +203,8 @@ class CreateNewChurchMember extends Page
                                         }
                                     }),
 
+                                Checkbox::make('has_dependants')->inline(false)->live(),
+
                                 Repeater::make('dependants')
                                     ->schema([
                                         TextInput::make('first_name')
@@ -267,7 +269,7 @@ class CreateNewChurchMember extends Page
                                     ->addActionLabel('Add Dependants')
                                     ->columnSpan('full')
                                     ->columns(4)
-
+                                    ->hidden(fn (Get $get): bool => ! $get('has_dependants'))
                                 ]),
 
                         Step::make('identifications')
@@ -275,8 +277,9 @@ class CreateNewChurchMember extends Page
                             ->schema([
                                 Select::make('identification_type')
                                     ->options([
-                                        'nida' => 'Nida',
-                                        'passport' => 'passport'
+                                        'nida' => 'NIDA',
+                                        'passport' => 'Passport',
+                                        'driving_license' => 'Driving License'
                                     ])
                                     ->reactive(),
 
@@ -345,7 +348,7 @@ class CreateNewChurchMember extends Page
                                     }
                                 }),
 
-                        Step::make('Address Details')
+                        Step::make('Physical Address')
                             ->schema([
                             Grid::make(3)
                                 ->schema([
