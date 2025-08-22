@@ -34,7 +34,7 @@ class CreateAdmin extends CreateRecord
             }
         }else if(Auth::guard('admin')->user()->hasRole('Diocese Admin')){
             $district_admin = Admin::whereNotNull('church_district_id')->pluck('church_district_id');
-            if(ChurchDistrict::whereNotIn('id', $district_admin)->count() > 0){
+            if(ChurchDistrict::whereNotIn('id', $district_admin)->where('diocese_id', auth()->user()->diocese_id)->count() > 0){
                 abort_unless(static::getResource()::canCreate(), 403);
             }else{
                 Notification::make()
@@ -46,7 +46,7 @@ class CreateAdmin extends CreateRecord
             }
         }else if(Auth::guard('admin')->user()->hasRole('ChurchDistrict Admin')){
             $church_admin = Admin::whereNotNull('church_id')->pluck('church_id');
-            if(Church::whereNotIn('id', $church_admin)->count() > 0){
+            if(Church::whereNotIn('id', $church_admin)->where('church_type','parish')->count() > 0){
                 abort_unless(static::getResource()::canCreate(), 403); 
             }else{
                 Notification::make()

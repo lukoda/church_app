@@ -32,19 +32,19 @@ class CreateChurchSecretary extends CreateRecord
             if(Auth::guard('admin')->user()->checkPermissionTo('create ChurchSecretary')){
                 if(Auth::guard('admin')->user()->hasRole('Parish Admin')){
 
-                    if(ChurchSecretary::where('title', 'Church Secretary')->where('church_assigned_id', auth()->user()->church_id)
-                       ->where('status', 'active')->exists()){
-                         Notification::make()
-                            ->title('There can not be more than one Church Secretary')
-                            ->body('A Church can have only one church secretary.')
-                            ->warning()
-                            ->send();
+                    // if(ChurchSecretary::where('title', 'Church Secretary')->where('church_assigned_id', auth()->user()->church_id)
+                    //    ->where('status', 'active')->exists() && Church::where('church_type', 'sub_parish')->whereId(auth()->user()->church_id)->exists()){
+                    //      Notification::make()
+                    //         ->title('There can not be more than one Church Secretary')
+                    //         ->body('A Church can have only one church secretary.')
+                    //         ->warning()
+                    //         ->send();
 
-                        redirect()->to(static::getResource()::getUrl('index'));
+                    //     redirect()->to(static::getResource()::getUrl('index'));
 
-                    }else{
+                    // }else{
                         abort_unless(static::getResource()::canCreate(), 403);
-                    }
+                    // }
 
 
                 //     if(ChurchSecretary::where('title', 'ArchBishop Secretary')->where('status', 'active')->exists()){

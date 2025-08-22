@@ -15,6 +15,8 @@ use Filament\Notifications\Notification;
 use Filament\Facades\Filament;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Contracts\Support\Htmlable;
+use Filament\Actions\Action;
 
 class Login extends BaseLogin
 {
@@ -93,5 +95,22 @@ class Login extends BaseLogin
         session()->regenerate();
 
         return app(LoginResponse::class);
+    }
+
+    public function getTitle(): string | Htmlable
+    {
+        return __('filament-panels::pages/auth/login.title');
+    }
+
+    public function getHeading(): string | Htmlable
+    {
+        return __('Login');
+    } 
+
+    protected function getAuthenticateFormAction(): Action
+    {
+        return Action::make('authenticate')
+            ->label(__('Login'))
+            ->submit('authenticate');
     }
 }

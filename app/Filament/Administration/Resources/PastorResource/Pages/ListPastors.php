@@ -56,7 +56,7 @@ class ListPastors extends ListRecords
                 if(Auth::guard('admin')->user()->hasRole('Dinomination Admin') && Pastor::where('title', 'ArchBishop')->where('status', 'active')->exists() && auth()->user()->checkPermissionTo('create Pastor')){
                     return false;
                 }else if(Auth::guard('admin')->user()->hasRole('Diocese Admin') && auth()->user()->checkPermissionTo('create Pastor')){
-                    return false;
+                    return true;
                 }else {
                     if(auth()->user()->checkPermissionTo('create Pastor')){
                         return true;

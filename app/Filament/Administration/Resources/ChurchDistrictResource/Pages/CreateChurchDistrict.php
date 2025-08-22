@@ -9,6 +9,8 @@ use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Church;
+use App\Models\ChurchDistrict;
 
 class CreateChurchDistrict extends CreateRecord
 {
@@ -17,8 +19,33 @@ class CreateChurchDistrict extends CreateRecord
     protected function authorizeAccess(): void
     {
         if(Auth::guard('admin')->user()->checkPermissionTo('create ChurchDistrict')){
-            abort_unless(static::getResource()::canCreate(), 403);
-        }else{
+            if(auth()->user()->hasRole('Dinomination Admin') && Church::where('church_type', 'dinomination')->exists()){
+                Notification::make()
+                ->title('Can not create more than one Dinomination Church District')
+                ->body('Each Dinomination can have only one Dinomination Church DIstrict.')
+                ->danger()
+                ->send();
+                redirect()->to(static::getResource()::getUrl('index'));
+            }else if(auth()->user()->hasRole('Dinomination Admin') && ChurchDistrict::count() > 0){
+                Notification::make()
+                ->title('Please create dinomination church district with assigned diocese admin')
+                ->body('Since, church districts exist please proceed in creating church')
+                ->danger()
+                ->send();
+                redirect()->to(static::getResource()::getUrl('index'));
+            }
+            else{
+                abort_unless(static::getResource()::canCreate(), 403);
+            }
+        }else if(auth()->user()->hasRole('Dinomination Admin')){
+            Notification::make()
+            ->title('Can not create more than one Dinomination Church District')
+            ->body('Each Dinomination can have only one Dinomination Church DIstrict.')
+            ->danger()
+            ->send();
+            redirect()->to(static::getResource()::getUrl('index'));
+        }
+        else{
             Notification::make()
             ->title('Access Denied')
             ->body('Please contact your administrator.')
@@ -48,15 +75,27 @@ class CreateChurchDistrict extends CreateRecord
             // dd(Ward::whereIn('district_id', $churchdistrict['districts'])->pluck('id')->toArray());
         }
 
-        $model = static::getModel()::create([
-            'name' => $data['name'],
-            'status' => $data['status'],
-            'regions' => $regions,
-            'districts' => $districts,
-            'all_wards' => true,
-            'wards' => $wards,
-            'diocese_id' => $data['diocese_id']
-        ]);
+        if(auth()->user()->hasRole('Diocese Admin')){
+            $model = static::getModel()::create([
+                'name' => $data['name'],
+                'status' => $data['status'],
+                'regions' => $regions,
+                'districts' => $districts,
+                'all_wards' => true,
+                'wards' => $wards,
+                'diocese_id' => $data['diocese']
+            ]);
+        }else{
+            $model = static::getModel()::create([
+                'name' => $data['name'],
+                'status' => $data['status'],
+                'regions' => $regions,
+                'districts' => $districts,
+                'all_wards' => true,
+                'wards' => $wards,
+                'diocese_id' => $data['diocese_id']
+            ]);
+        }
 
         return $model;
     }

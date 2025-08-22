@@ -13,7 +13,7 @@ class Ward extends Model
     protected $fillable = [
         'name',
         'status',
-        'region_id',
+        'district_id',
     ];
 
     protected $casts = [

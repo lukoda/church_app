@@ -23,6 +23,7 @@ return new class extends Migration
             $table->foreignId('district_id')->constrained();
             $table->foreignId('ward_id')->constrained();
             $table->json('pastors')->nullable();
+            $table->string('status')->default('Active');
             $table->timestamps();
         });
     }

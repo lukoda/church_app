@@ -50,20 +50,21 @@ class ChurchDistrictResource extends Resource
             ->schema([
                 Grid::make(3)
                     ->schema([
-                        // Select::make('diocese_id')
-                        // ->reactive()
-                        // ->searchable()
-                        // ->options(Diocese::where('dinomination_id', auth()->user()->dinomination_id)->pluck('name', 'id'))
-                        // ->required(),
+                        Select::make('diocese_id')
+                        ->reactive()
+                        ->searchable()
+                        ->options(Diocese::where('dinomination_id', auth()->user()->dinomination_id)->pluck('name', 'id'))
+                        ->required()
+                        ->visible(auth()->user()->hasRole('Dinomination Admin')),
 
-                        Hidden::make('diocese_id')
-                        ->default(auth()->user()->diocese_id),
+                        Hidden::make('diocese')
+                        ->default(auth()->user()->diocese_id)
+                        ->visible(auth()->user()->hasRole('Diocese Admin')),
 
                         TextInput::make('name')
                             ->required()
                             ->unique(modifyRuleUsing: function(Unique $rule, Get $get, $state){
-                                return $rule->where('diocese_id', $get('diocese_id'))
-                                            ->where('name', $state);
+                                return $rule->where('name', $state);
                             },ignoreRecord: true),
 
                         Select::make('status')
@@ -81,8 +82,13 @@ class ChurchDistrictResource extends Resource
         
                                 Select::make('regions')
                                     ->options(function(Get $get){
-                                        if(blank($get('../../diocese_id'))){
-                                            return [];
+                                        if(auth()->user()->hasRole('Diocese Admin')){
+                                            if(blank($get('../../diocese'))){
+                                                return [];
+                                            }else{
+
+                                                return Region::whereIn('name', Diocese::whereId($get('../../diocese'))->pluck('regions')->collapse())->pluck('name', 'name')->toArray();
+                                            }
                                         }else{
                                             return Region::whereIn('name', Diocese::whereId($get('../../diocese_id'))->pluck('regions')->collapse())->pluck('name', 'name')->toArray();
                                         }
@@ -101,11 +107,30 @@ class ChurchDistrictResource extends Resource
                                         if(blank($get('regions'))){
                                             return [];
                                         }else{
-                                            $churchdistrict = Diocese::whereId($get('../../diocese_id'))->pluck('districts');
+                                            if(auth()->user()->hasRole('Diocese Admin')){
+                                                $churchdistrict = Diocese::whereId($get('../../diocese'))->pluck('districts');
 
-                                            return District::whereIn('id', $churchdistrict->flatten())->where('region_id', Region::whereName($get('regions'))->pluck('id'))->pluck('name', 'id');
-                                            // return District::whereIn('id', Diocese::whereId($get('../../diocese_id'))->pluck('districts'))->pluck('name', 'id');
-                                            // return $churchdistrict->keys();
+                                                //get already assigned church districts
+                                                $churchDistrict = ChurchDistrict::where('diocese_id', $get('../../diocese'))->first();
+                                                $regions = []; $districts = [];
+                                                if($churchDistrict != null){
+                                                    foreach($churchDistrict->districts as $key => $district){
+                                                        $regions[] = $district[$churchDistrict->regions[$key]];
+                                                        $districts = array_merge($districts, District::whereIn('id', $district[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                                                    }
+                                                }
+
+                                                return District::whereIn('id', $churchdistrict->flatten())->where('region_id', Region::whereName($get('regions'))->pluck('id'))->whereNotIn('id', $districts)->pluck('name', 'id');
+                                                // return District::whereIn('id', Diocese::whereId($get('../../diocese_id'))->pluck('districts'))->pluck('name', 'id');
+                                                // return $churchdistrict->keys();
+                                            }else{
+                                                $churchdistrict = Diocese::whereId($get('../../diocese_id'))->pluck('districts');
+
+                                                return District::whereIn('id', $churchdistrict->flatten())->where('region_id', Region::whereName($get('regions'))->pluck('id'))->pluck('name', 'id');
+                                                // return District::whereIn('id', Diocese::whereId($get('../../diocese_id'))->pluck('districts'))->pluck('name', 'id');
+                                                // return $churchdistrict->keys();
+                                            }
+
                                         }
                                     })
                                     ->visible(function(Get $get){
@@ -155,9 +180,9 @@ class ChurchDistrictResource extends Resource
     {
         return $table
             ->columns([
-                // TextColumn::make('diocese.name')
-                //     ->label('Diocese Name')
-                //     ->searchable(),
+                TextColumn::make('diocese.name')
+                    ->label('Diocese Name')
+                    ->searchable(),
 
                 TextColumn::make('name')
                 ->label('ChurchDistrict Name')
@@ -199,11 +224,19 @@ class ChurchDistrictResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                ->hidden(! auth()->user()->checkPermissionTo('update ChurchDistrict')),
+                ->hidden(function($record){
+                    if(auth()->user()->hasRole('Dinomination Admin') && Church::where('church_district_id',$record->id)->where('church_type', 'dinomination')->exists() && auth()->user()->checkPermissionTo('update ChurchDistrict')){
+                        return false;
+                    }else if(auth()->user()->hasRole('Diocese Admin') && auth()->user()->checkPermissionTo('update ChurchDistrict')){
+                        return false;
+                    }else{
+                        return true;
+                    }
+                }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    // Tables\Actions\DeleteBulkAction::make()
+                    // Tables\Actions\DeleteBulkAction::make() 
                     // ->hidden(! auth()->user()->checkPermissionTo('delete ChurchDistrict')),
                 ]),
             ]);

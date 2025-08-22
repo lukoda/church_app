@@ -44,7 +44,7 @@ class CreatePastor extends CreateRecord
                         abort_unless(static::getResource()::canCreate(), 403);
                     }
                 }else if(Auth::guard('admin')->user()->hasRole('Diocese Admin')){
-                    if(Pastor::where('title', 'Bishop')->where('status', 'active')->whereIn('church_assigned_id', Church::whereIn('church_district_id', ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('id'))->pluck('id'))->exists()){
+                    if(Pastor::whereIn('title', ['Bishop','ArchBishop'])->where('status', 'active')->whereIn('church_assigned_id', Church::whereIn('church_district_id', ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('id'))->pluck('id'))->exists()){
                         Notification::make()
                         ->title('There can not be more than one Bishop')
                         ->body('A Diocese can have only one Bishop.')

@@ -7,6 +7,8 @@ use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Diocese;
+use App\Models\Church;
 
 class ListChurchDistricts extends ListRecords
 {
@@ -29,7 +31,24 @@ class ListChurchDistricts extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+            ->before(function(Actions\CreateAction $action){
+                if(Diocese::all()->count() <= 0){
+                    Notification::make()
+                        ->title('Unfortunately there is no diocese created')
+                        ->warning()
+                        ->send();
+
+                    $action->halt();
+                }
+            })
+            ->visible(function() {
+                if(Auth::guard('admin')->user()->hasRole('Dinomination Admin') && Church::where('church_type', 'dinomination')->exists()){
+                    return false;
+                }else{
+                    return true;
+                }
+            })
         ];
     }
 }

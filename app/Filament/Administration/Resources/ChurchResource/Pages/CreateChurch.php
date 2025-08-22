@@ -21,15 +21,37 @@ class CreateChurch extends CreateRecord
 
     protected function authorizeAccess(): void
     {
-        if(Auth::guard('admin')->user()->checkPermissionTo('create Church')){
-            if(auth()->user()->hasRole('Diocese Admin') && Church::whereIn('church_district_id', ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('id'))->exists()){
+        if(ChurchDistrict::where('status','Active')->first() == null){
+            Notification::make()
+            ->title('At least one church district is required')
+            ->body('To create a church required at least one church district is created')
+            ->danger()
+            ->send();
+            redirect()->to(static::getResource()::getUrl('index'));
+        }else if(Auth::guard('admin')->user()->checkPermissionTo('create Church')){
+            if(auth()->user()->hasRole('Diocese Admin') && Church::whereIn('church_district_id', ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('id'))->where('church_type', 'dinomination')->exists()){
+                Notification::make()
+                ->title('Dinomination Church already exists')
+                ->body('In a  diocese a dinominatin church is diocese church')
+                ->danger()
+                ->send();
+                redirect()->to(static::getResource()::getUrl('index'));
+            }else if(auth()->user()->hasRole('Diocese Admin') && Church::whereIn('church_district_id', ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('id'))->where('church_type', 'diocese')->exists()){
                 Notification::make()
                 ->title('Can not create more than one Diocese Church')
                 ->body('Each Diocese can have only one Diocese Church.')
                 ->danger()
                 ->send();
                 redirect()->to(static::getResource()::getUrl('index'));
-            }else{
+            }else if(auth()->user()->hasRole('Dinomination Admin') && Church::where('church_type', 'dinomination')->exists()){
+                Notification::make()
+                ->title('Can not create more than one Dinomination Church')
+                ->body('A Dinomination can have only one Dinomination Church.')
+                ->danger()
+                ->send();
+                redirect()->to(static::getResource()::getUrl('index'));
+            } 
+            else{
                 abort_unless(static::getResource()::canCreate(), 403);
             }
         }else{
@@ -62,7 +84,7 @@ class CreateChurch extends CreateRecord
             'ward_id' => $data['ward_id'],
             'church_location_status' => $data['church_location_status'],
             'pictures' => $data['pictures'],
-            'church_district_id' => auth()->user()->hasRole('Diocese Admin') ? $data['church_district'] : (auth()->user()->hasRole('Parish Admin') ? Church::where('Id', auth()->user()->church_id)->pluck('church_district_id')[0] : $data['church_district_id']),
+            'church_district_id' => auth()->user()->hasRole('Diocese Admin') || auth()->user()->hasRole('Dinomination Admin') ? $data['church_district'] : (auth()->user()->hasRole('Parish Admin') ? Church::where('Id', auth()->user()->church_id)->pluck('church_district_id')[0] : $data['church_district_id']),
         ]);
     }
 }

@@ -6,6 +6,7 @@ use Filament\Pages\Page;
 use Filament\Pages\Auth\Register as BaseRegister;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Hidden;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Hash;
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
@@ -23,6 +24,8 @@ use App\Models\Ward;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Get;
 use App\Models\User;
+use Filament\Actions\Action;
+use Illuminate\Contracts\Support\Htmlable;
 
 class Register extends BaseRegister
 {
@@ -55,10 +58,16 @@ class Register extends BaseRegister
             'form' => $this->form(
                 $this->makeForm()
                     ->schema([
-                            Select::make('dinomination_id')
-                                ->label('Dinomination')
-                                ->options(Dinomination::all()->pluck('name', 'id'))
-                                ->required(),
+                            // Select::make('dinomination_id')
+                            //     ->label('Dinomination')
+                            //     ->options(Dinomination::all()->pluck('name', 'id'))
+                            //     ->required(),
+                            
+                            Hidden::make('dinomination_id')
+                            ->default(fn() => Dinomination::where('name', 'KKKT')->pluck('id')[0]),
+
+                            Hidden::make('church_id')
+                            ->default(fn() => Church::where('name','Azania Front')->pluck('id')[0]),
 
                             // Select::make('search_key')
                             //     ->options([
@@ -71,31 +80,58 @@ class Register extends BaseRegister
                             //     ->reactive()
                             //     ->required(),
 
-                            Select::make('church_id')
-                                ->searchable()
-                                ->label('church')
-                                // ->options(function (Get $get){
-                                //     return Church::all()->pluck('name', 'id')->toArray();
-                                // })
-                                ->getSearchResultsUsing(function(string $search, Get $get): array{
-                                    return Church::orWhereIn('region_id', Region::where('name', 'like', '%'.$search.'%')->pluck('id'))
-                                                    ->orWhereIn('district_id', District::where('name', 'like', '%'.$search.'%')->pluck('id'))
-                                                    ->orWhereIn('ward_id', Ward::where('name', 'like', '%'.$search.'%')->pluck('id'))
-                                                    ->orWhere('name', 'like', '%'.$search.'%')
-                                                    ->orWhereIn('church_district_id', ChurchDistrict::where('name', 'like', '%'.$search.'%')->pluck('id'))
-                                                    ->pluck('name','id')->toArray();
-                                })
-                                ->getOptionLabelsUsing(function(array $values): array {
-                                    return Church::whereIn('id', $values)->pluck('name','id')->toArray();
-                                })->required(),
+                            // Select::make('church_id')
+                            //     ->searchable()
+                            //     ->label('church')
+                            //     // ->options(function (Get $get){
+                            //     //     return Church::all()->pluck('name', 'id')->toArray();
+                            //     // })
+                            //     ->getSearchResultsUsing(function(string $search, Get $get): array{
+                            //         return Church::orWhereIn('region_id', Region::where('name', 'like', '%'.$search.'%')->pluck('id'))
+                            //                         ->orWhereIn('district_id', District::where('name', 'like', '%'.$search.'%')->pluck('id'))
+                            //                         ->orWhereIn('ward_id', Ward::where('name', 'like', '%'.$search.'%')->pluck('id'))
+                            //                         ->orWhere('name', 'like', '%'.$search.'%')
+                            //                         ->orWhereIn('church_district_id', ChurchDistrict::where('name', 'like', '%'.$search.'%')->pluck('id'))
+                            //                         ->pluck('name','id')->toArray();
+                            //     })
+                            //     ->getOptionLabelsUsing(function(array $values): array {
+                            //         return Church::whereIn('id', $values)->pluck('name','id')->toArray();
+                            //     })->required(),
+
+                            Select::make('residence_status')
+                            ->label('Residential Status')
+                            ->live()
+                            ->options([
+                                'Resident' => 'Resident',
+                                'Non Resident' => 'Non Resident'
+                            ])
+                            ->required(),
 
                             TextInput::make('phone')
                                 ->label(__('Phone Number'))
                                 ->tel()
-                                ->helperText('0789******')
-                                ->maxLength(10)
+                                ->placeholder(function(Get $get){
+                                    if($get('residence_status') == 'Resident'){
+                                        return '0789******';
+                                    }else if($get('residence_status') == 'Non Resident'){
+                                        return '+1234xxxxxxx';
+                                    }else{
+                                        return '';
+                                    }
+                                })
+                                ->helperText('This will be your username')
+                                ->maxLength(function(GET $get){
+                                    if($get('residence_status') == 'Resident'){
+                                        return 10;
+                                    }else{
+                                        return 20;
+                                    }
+                                })
                                 ->required()
-                                ->extraInputAttributes(['tabindex' => 1]),
+                                ->extraInputAttributes(['tabindex' => 1])
+                                ->unique(modifyRuleUsing: function(Unique $rule, $state, Get $get) {
+                                    return $rule->where('phone', $state);
+                                }, ignoreRecord:true),
                             $this->getPasswordFormComponent(),
                             $this->getPasswordConfirmationFormComponent(),
                         ])
@@ -139,5 +175,22 @@ class Register extends BaseRegister
     
             return app(RegistrationResponse::class);
         }
+    }
+
+    public function getRegisterFormAction(): Action
+    {
+        return Action::make('register')
+            ->label(__('Create Account'))
+            ->submit('register');
+    }
+
+    public function getHeading(): string | Htmlable
+    {
+        return __('Create Account');
+    }
+
+    public function getTitle(): string | Htmlable
+    {
+        return __('filament-panels::pages/auth/register.title');
     }
 }

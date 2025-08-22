@@ -28,7 +28,7 @@ class EditChurchSecretary extends EditRecord
                 abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
             }else if(Auth::guard('admin')->user()->hasRole('ChurchDistrict Admin') && ChurchSecretary::whereId($this->getRecord()->id)->where('church_assigned_id', auth()->user()->church_id)->where('title', 'ChurchDistrict Secretary')->exists()){
                 abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
-            }else if(Auth::guard('admin')->user()->hasRole('Diocese Admin') && Church::whereId($this->getRecord()->id)->whereIn('church_assigned_id', auth()->user()->church_id)->where('title', 'Bishop Secretary')->exists()){
+            }else if(Auth::guard('admin')->user()->hasRole('Diocese Admin') && ChurchSecretary::whereId($this->getRecord()->id)->where('church_assigned_id', auth()->user()->church_id)->where('title', 'Bishop Secretary')->exists()){
                 abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
             }else{
                 Notification::make()

@@ -19,7 +19,8 @@ class DatabaseSeeder extends Seeder
         DB::unprepared(file_get_contents(database_path('seeders/data/wards.sql')));
         $this->call([
             RolesPermission::class,
-            UserSeeder::class
+            UserSeeder::class,
+            CountriesSeeder::class
         ]);
     }
 }

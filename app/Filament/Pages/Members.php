@@ -17,6 +17,7 @@ use Filament\Infolists\Components\Split;
 use App\Models\ChurchMember;
 use App\Models\Region;
 use App\Models\District;
+use App\Models\Country;
 use App\Models\Ward;
 use App\Models\Jumuiya;
 use App\Models\Card;
@@ -202,7 +203,26 @@ class Members extends Page
                                         ->required(),
 
                                     DatePicker::make('date_of_birth')
-                                        ->required(),
+                                        ->required()
+                                        ->maxDate(function(){
+                                            $dob = Carbon::now();
+                                            return $dob->subYears(12);
+                                        })
+                                        ->validationMessages([
+                                            'error' => 'Only 12 years above are allowed to register as church member.',
+                                        ]),
+
+                                    Select::make('citizenship')
+                                        ->options(Country::all()->pluck('name','code'))
+                                        ->required()                                   
+                                        ->visible(fn () => auth()->user()->residence_status == 'Resident' ? false : true ),
+    
+                                    FileUpload::make('picture')
+                                        ->label('ID Image')
+                                        ->downloadable()
+                                        ->nullable()
+                                        ->columnSpan('full'),
+    
 
                                     Hidden::make('user_id')
                                         ->default(auth()->user()->id),
@@ -212,14 +232,41 @@ class Members extends Page
 
                                     Section::make('Spouse Information')
                                         ->schema([
-                                            TextInput::make('spouse_name')
-                                                ->required(),
-
+                                            TextInput::make('spouse_first_name')
+                                            ->required(),
+        
+                                            TextInput::make('spouse_middle_name')
+                                            ->required(),
+            
+                                            TextInput::make('spouse_surname')
+                                            ->required(),
+    
+                                            Select::make('spouse_citizenship')
+                                            ->options(Country::all()->pluck('name','code'))
+                                            ->required(),
+    
+                                            Select::make('spouse_residence_status')
+                                            ->label('Residential Status')
+                                            ->live()
+                                            ->options([
+                                                'Resident' => 'Resident',
+                                                'Non Resident' => 'Non Resident'
+                                            ])
+                                            ->required(),
+    
                                             TextInput::make('spouse_contact_no')
                                                 ->tel()
-                                                ->maxLength(13)
-                                                ->telRegex('/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[\s\.\/0-9]*$/')
-                                                ->helperText('+255*********')
+                                                ->maxLength(fn() => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
+                                                ->helperText(function(Get $get){
+                                                    if($get('spouse_residence_status') == 'Resident'){
+                                                        return '0789******';
+                                                    }else if($get('spouse_residence_status') == 'Non Resident'){
+                                                        return '+1234xxxxxxx';
+                                                    }else{
+                                                        return '';
+                                                    }
+                                                })
+                                                ->maxLength(fn() => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
                                                 ->required(),
                                         ])
                                         ->columns(2)
@@ -231,7 +278,10 @@ class Members extends Page
                                             }
                                         }),
 
-                                    Checkbox::make('has_dependants')->inline(false)->live(),
+                                    Checkbox::make('has_dependants')
+                                    ->label('has_dependants?')
+                                    ->inline(false)
+                                    ->live(),
 
                                     Repeater::make('dependants')
                                         ->relationship('dependants')
@@ -302,7 +352,7 @@ class Members extends Page
 
                                     ]),
 
-                            Step::make('identifications')
+                            Step::make('ID Details')
                                 ->columns(2)
                                 ->schema([
                                     Select::make('identification_type')
@@ -315,6 +365,10 @@ class Members extends Page
 
                                     TextInput::make('nida_id')
                                         ->required()
+                                        ->label('ID Number')
+                                        ->helperText('eg. xxxxxxxx-xxxxx-xxxxx-xx')
+                                        ->regex('/(\d{8}-\d{5}-\d{5}-\d{2)/')
+                                        ->maxLength(23)
                                         ->visible(function(Get $get){
                                             if($get('identification_type') == 'nida'){
                                                 return true;
@@ -333,8 +387,20 @@ class Members extends Page
                                             }
                                         }),
 
-                                    FileUpload::make('picture')
-                                        ->label('Member Image')
+                                    TextInput::make('driver_id')
+                                        ->label('Driving Licence ID Number')
+                                        ->required()
+                                        ->visible(function(Get $get){
+                                            if($get('identification_type') == 'driving_license'){
+                                                return true;
+                                            }else{
+                                                return false;
+                                            }
+                                        }),
+    
+                                    FileUpload::make('id_image')
+                                        ->label('ID Image')
+                                        ->required()
                                         ->downloadable()
                                         ->nullable()
                                         ->columnSpan('full'),
@@ -368,6 +434,13 @@ class Members extends Page
                                                     }else{
                                                         return false;
                                                     }
+                                            })
+                                            ->visible(function(){
+                                                if(auth()->user()->residence_status == 'Non Resident'){
+                                                    return false;
+                                                }else if(auth()->user()->residence_status == 'Resident'){
+                                                    return true;
+                                                }
                                             }),
 
                                         Select::make('district_id')
@@ -394,6 +467,13 @@ class Members extends Page
                                                     }else{
                                                         return false;
                                                     }
+                                            })
+                                            ->visible(function(){
+                                                if(auth()->user()->residence_status == 'Non Resident'){
+                                                    return false;
+                                                }else if(auth()->user()->residence_status == 'Resident'){
+                                                    return true;
+                                                }
                                             }),
 
                                         Select::make('ward_id')
@@ -419,28 +499,91 @@ class Members extends Page
                                                     }else{
                                                         return false;
                                                     }
+                                            })
+                                            ->visible(function(){
+                                                if(auth()->user()->residence_status == 'Non Resident'){
+                                                    return false;
+                                                }else if(auth()->user()->residence_status == 'Resident'){
+                                                    return true;
+                                                }
                                             }),
 
                                             TextInput::make('street')
-                                                ->nullable(),
+                                                ->nullable()
+                                                ->visible(function(){
+                                                    if(auth()->user()->residence_status == 'Non Resident'){
+                                                        return false;
+                                                    }else if(auth()->user()->residence_status == 'Resident'){
+                                                        return true;
+                                                    }
+                                                }),
 
                                             TextInput::make('block_no')
-                                                ->nullable(),
+                                                ->nullable()
+                                                ->visible(function(){
+                                                    if(auth()->user()->residence_status == 'Non Resident'){
+                                                        return false;
+                                                    }else if(auth()->user()->residence_status == 'Resident'){
+                                                        return true;
+                                                    }
+                                                }),
 
                                             TextInput::make('house_no')
-                                                ->nullable(),
+                                                ->nullable()
+                                                ->visible(function(){
+                                                    if(auth()->user()->residence_status == 'Non Resident'){
+                                                        return false;
+                                                    }else if(auth()->user()->residence_status == 'Resident'){
+                                                        return true;
+                                                    }
+                                                }),
+
+                                            Select::make('resident_country')
+                                                ->label('Resident Country')
+                                                ->options(Country::all()->pluck('name','code'))
+                                                ->required()
+                                                ->visible(function(){
+                                                    if(auth()->user()->residence_status == 'Non Resident'){
+                                                        return true;
+                                                    }else if(auth()->user()->residence_status == 'Resident'){
+                                                        return false;
+                                                    }
+                                                }),
+    
+                                            TextInput::make('resident_city')
+                                            ->label('Resident City')
+                                            ->required()
+                                            ->visible(function(){
+                                                if(auth()->user()->residence_status == 'Non Resident'){
+                                                    return true;
+                                                }else if(auth()->user()->residence_status == 'Resident'){
+                                                    return false;
+                                                }
+                                            }),
+    
+                                            TextInput::make('resident_street')
+                                            ->label('Resident Street')
+                                            ->nullable()
+                                            ->visible(function(){
+                                                if(auth()->user()->residence_status == 'Non Resident'){
+                                                    return true;
+                                                }else if(auth()->user()->residence_status == 'Resident'){
+                                                    return false;
+                                                }
+                                            }),
+
                                         ]),
 
                                     ]),
 
-                            Step::make('Spiritual Information')
+                            Step::make('Other Information')
                                 ->columns(2)
                                 ->columnSpanFull()
                                 ->schema([
-                                    Section::make('Jumuiya Details')
+                                    Section::make('Details of Church Communities')
                                         ->schema([
                                             Select::make('jumuiya_id')
-                                                ->label('Jumuiya')
+                                                ->label('Communities')
                                                 ->searchable()
                                                 ->options(function(Get $get){
                                                     if(! blank($get('ward_id'))){
@@ -466,7 +609,14 @@ class Members extends Page
                                                     }
                                                 })
                                                 ->disabled()
-                                        ]),
+                                        ])
+                                        ->hidden(function(){
+                                            if(auth()->user()->residence_status == 'Non Resident'){
+                                                return true;
+                                            }else if(auth()->user()->residence_status == 'Resident'){
+                                                return false;
+                                            }
+                                        }),
 
                                     Checkbox::make('received_confirmation')
                                         ->required(function(){
@@ -551,7 +701,14 @@ class Members extends Page
                                                 ->options([
                                                     'yes' => 'Yes',
                                                     'no' => 'No'
-                                                ]),
+                                                ])
+                                                ->visible(function(){
+                                                    if(auth()->user()->residence_status == 'Non Resident'){
+                                                        return false;
+                                                    }else if(auth()->user()->residence_status == 'Resident'){
+                                                        return true;
+                                                    }
+                                                }),
 
                                             TextInput::make('previous_church')
                                                     ->nullable(),
@@ -569,8 +726,8 @@ class Members extends Page
                                                             ->nullable()
                                                             ->helperText('If multiple separate by comma\'s(,)'),
 
-                                                        TextInput::make('work_location')
-                                                            ->nullable(),
+                                                        // TextInput::make('work_location')
+                                                        //     ->nullable(),
 
                                                         Hidden::make('status')
                                                             ->default('inactive'),
@@ -584,6 +741,7 @@ class Members extends Page
                                 ->schema([
 
                                     Checkbox::make('is_NewMember')
+                                        ->label('Is NewMember?')
                                         ->default(false)
                                         ->reactive()
                                         ->required(function(){
@@ -637,7 +795,13 @@ class Members extends Page
 
                                             ])
                                             ->columnSpan('full')
-                                            ->columns(2),
+                                            ->columns(2)
+                                            ->addable(false)
+                                            ->deletable(false)
+                                            ->defaultItems(function(){
+                                                $cards = Card::where('church_id', auth()->user()->church_id)->where('card_status', 'active')->count();
+                                                return $cards ?? 0;
+                                            }),
                                 ]),
 
 

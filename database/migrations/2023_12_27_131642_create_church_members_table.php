@@ -22,11 +22,15 @@ return new class extends Migration
             $table->string('phone')->unique();
             $table->date('date_of_birth')->nullable();
             $table->date('date_registered')->nullable();
+            $table->string('identification_type');
             $table->string('nida_id')->nullable();
             $table->string('passport_id')->nullable();
+            $table->string('driver_id')->nullable();
             $table->string('picture')->nullable();
+            $table->string('id_image')->nullable();
             $table->boolean('is_NewMember')->nullable();
             $table->integer('card_no')->nullable();
+            $table->string('citizenship')->nullable();
             $table->string('personal_details')->nullable();
             //address information
             $table->string('postal_code')->nullable();
@@ -36,6 +40,9 @@ return new class extends Migration
             $table->string('street')->nullable();
             $table->string('block_no')->nullable();
             $table->string('house_no')->nullable();
+            $table->string('resident_country')->nullable();
+            $table->string('resident_city')->nullable();
+            $table->string('resident_street')->nullable();
             $table->string('address_details')->nullable();
             //spiritual information
             $table->foreignId('jumuiya_id')->nullable()->references('id')->on('jumuiyas');
@@ -52,7 +59,12 @@ return new class extends Migration
             //Marriage Information
             $table->string('marital_status')->nullable();
             $table->foreignId('spouse_id')->nullable()->references('id')->on('church_members');
-            $table->string('spouse_name')->nullable();
+            $table->string('spouse_first_name')->nullable();
+            $table->string('spouse_middle_name')->nullable();
+            $table->string('spouse_surname')->nullable();
+            $table->string('spouse_citizenship')->nullable();
+            $table->string('spouse_residence_status')->nullable();
+            $table->string('spouse_name')->nullable()->virtualAs('concat(spouse_first_name, \' \', spouse_middle_name, \' \' ,spouse_surname)');;
             $table->string('spouse_contact_no')->nullable();
             //education and field information
             $table->string('education_level')->nullable();

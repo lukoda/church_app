@@ -22,7 +22,8 @@ class Church extends Model
         'region_id',
         'district_id',
         'ward_id',
-        'pastors'
+        'pastors',
+        'status'
     ];
 
     protected $casts = [

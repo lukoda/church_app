@@ -78,6 +78,7 @@ class EditChurchDistrict extends EditRecord
         }
         
         $data['church district details'] = $churchDistrict;
+        $data["diocese"] = $data["diocese_id"];
         return $data;
     }
 

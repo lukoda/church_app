@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('phone')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('residence_status');
             $table->bigInteger('church_id')->references('id')->on('churches');
             $table->bigInteger('dinomination_id')->references('id')->on('dinominations');
             $table->rememberToken();

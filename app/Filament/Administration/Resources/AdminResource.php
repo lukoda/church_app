@@ -22,6 +22,7 @@ use Filament\Forms\Components\Hidden;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Filament\Tables\Columns\Column;
 
 class AdminResource extends Resource
 {
@@ -103,10 +104,10 @@ class AdminResource extends Resource
                 ->options(function(string $context, $record){
                     if($context == 'edit'){
                         $church_admin = Admin::whereId($record->id)->pluck('church_id');
-                        return Church::whereNotIn('id', $church_admin)->where('church_district_id', auth()->user()->church_district_id)->pluck('name', 'id');
+                        return Church::whereNotIn('id', $church_admin)->where('church_district_id', auth()->user()->church_district_id)->where('church_type','parish')->pluck('name', 'id');
                     }else{
                         $church_admin = Admin::whereNotNull('church_id')->pluck('church_id');
-                        return Church::whereNotIn('id', $church_admin)->where('church_district_id', auth()->user()->church_district_id)->pluck('name', 'id');
+                        return Church::whereNotIn('id', $church_admin)->where('church_district_id', auth()->user()->church_district_id)->where('church_type','parish')->pluck('name', 'id');
                     }
                 })
                 ->required()
@@ -135,14 +136,16 @@ class AdminResource extends Resource
                 //         return 'Parish Admin';
                 //     }
                 // }),
-                // TextColumn::make('diocese.name')
-                // ->label('Assigned Diocese')
-                // ->searchable()
-                // ->default('-'),
+                TextColumn::make('diocese.name')
+                ->label('Assigned Diocese')
+                ->searchable()
+                ->default('-')
+                ->wrap(),
                 TextColumn::make('churchDistrict.name')
                 ->searchable()
                 ->label('Assigned ChurchDistrict')
-                ->default('-'),
+                ->default('-')
+                ->wrap(),
                 TextColumn::make('church.name')
                 ->searchable()
                 ->label('Assigned Church')

@@ -420,6 +420,11 @@ class RolesPermission extends Seeder
         Permission::insert($admin_permissions);
 
         $dinomination_admin->givePermissionTo([
+            'create ChurchDistrict',
+            'update ChurchDistrict',
+            'create Church',
+            'update Church',
+            'delete Church',
             'view-any ChurchDistrict',
             'view ChurchDistrict',
             'view-any Dinomination',

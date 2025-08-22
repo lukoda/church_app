@@ -16,12 +16,37 @@ class EditChurch extends EditRecord
 
     protected function authorizeAccess(): void
     {
-        if(Auth::guard('admin')->user()->checkPermissionTo('update Church')){
-            if(Auth::guard('admin')->user()->hasRole('Parish Admin') && Church::whereId($this->getrecord()->id)->where('parent_church', auth()->user()->church_id)->exists()){
+        if(auth()->user()->hasRole('Dinomination Admin') && $this->getrecord()->church_type != 'dinomination')
+        {
+            Notification::make()
+                ->title('Access Denied, can only be edited by respective '.$this->getrecord()->church_type.' admin.')
+                ->success()
+                ->send();
+
+                redirect()->to(static::getResource()::getUrl('index'));
+        }else if(auth()->user()->hasRole('Diocese Admin') && $this->getrecord()->church_type != 'diocese'){
+            Notification::make()
+                ->title('Access Denied, can only be edited by respective '.$record->church_type.' admin.')
+                ->success()
+                ->send();
+
+                redirect()->to(static::getResource()::getUrl('index'));
+        }else if(auth()->user()->hasRole('ChurchDistrict Admin') && $this->getrecord()->church_type != 'sub_parish'){
+            Notification::make()
+            ->title('Access Denied, can only be edited by respective church admin')
+            ->success()
+            ->send();
+
+            redirect()->to(static::getResource()::getUrl('index'));
+        }else if(Auth::guard('admin')->user()->checkPermissionTo('update Church')){
+
+            if(Auth::guard('admin')->user()->hasRole('Parish Admin') && Church::whereId($this->getrecord()->id)->orwhere('parent_church', auth()->user()->church_id)->exists()){
                 abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
-            }else if(Auth::guard('admin')->user()->hasRole('ChurchDistrict Admin') && Church::whereId($this->getRecord()->id)->where('church_district_id', auth()->user()->church_district_id)->exists()){
+            }else if(Auth::guard('admin')->user()->hasRole('ChurchDistrict Admin') && Church::whereId($this->getRecord()->id)->where('church_district_id', auth()->user()->church_district_id)->where('church_type', 'parish')->exists()){
                 abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
-            }else if(Auth::guard('admin')->user()->hasRole('Diocese Admin') && Church::whereId($this->getRecord()->id)->whereIn('church_district_id', ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('id'))->exists()){
+            }else if(Auth::guard('admin')->user()->hasRole('Diocese Admin') && Church::whereId($this->getRecord()->id)->whereIn('church_district_id', ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('id'))->where('church_type', 'diocese')->exists()){
+                abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
+            }else if(auth()->user()->hasRole('Dinomination Admin') && $this->getrecord()->church_type == 'dinomination' && Church::whereId($this->getRecord()->id)->exists()){
                 abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
             }else{
                 Notification::make()
@@ -39,12 +64,48 @@ class EditChurch extends EditRecord
             redirect()->to(static::getResource()::getUrl('index'));
         }
 
+
+        // if(Auth::guard('admin')->user()->checkPermissionTo('update Church')){
+        //     if(Auth::guard('admin')->user()->hasRole('Parish Admin') && Church::whereId($this->getrecord()->id)->where('parent_church', auth()->user()->church_id)->exists()){
+        //         abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
+        //     }else if(Auth::guard('admin')->user()->hasRole('ChurchDistrict Admin') && Church::whereId($this->getRecord()->id)->where('church_district_id', auth()->user()->church_district_id)->exists()){
+        //         abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
+        //     }else if(Auth::guard('admin')->user()->hasRole('Diocese Admin') && Church::whereId($this->getRecord()->id)->whereIn('church_district_id', ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('id'))->exists()){
+        //         abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
+        //     }else if(auth()->user()->hasRole('Dinomination Admin') && $this->getrecord()->church_type != 'dinomination'){
+        //         abort_unless(static::getResource()::canEdit($this->getRecord()), 403);
+        //     }
+        //     else{
+        //         Notification::make()
+        //         ->title('Page Not Found')
+        //         ->body('Sorry, the requested page does not exist.')
+        //         ->danger()
+        //         ->send();
+        //     }
+        // }else{
+        //     Notification::make()
+        //     ->title('Access Denied')
+        //     ->body('Please contact your administrator.')
+        //     ->danger()
+        //     ->send();
+        //     redirect()->to(static::getResource()::getUrl('index'));
+        // }
+
     }
 
 
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');
+    }
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        if(auth()->user()->hasRole('Dinomination Admin')){
+            $data['church_district'] = $data['church_district_id'];
+        }
+
+        return $data;
     }
 
     protected function getHeaderActions(): array
@@ -70,6 +131,8 @@ class EditChurch extends EditRecord
                         ->body('Church Deleted Successfully')
                         ->persistent()
                         ->send();
+
+                        redirect()->to(static::getResource()::getUrl('index'));
                     }
 
                 }),

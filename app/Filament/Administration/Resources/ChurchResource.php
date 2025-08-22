@@ -73,17 +73,22 @@ class ChurchResource extends Resource
                     ->visible(auth()->user()->hasRole(['ChurchDistrict Admin', 'Parish Admin'])),
 
                 Select::make('church_district')
-                ->options(ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('name','id'))
+                ->options(function(){
+                    if(auth()->user()->hasRole('Dinomination Admin')){
+                        return ChurchDistrict::whereIn('diocese_id', Diocese::where('dinomination_id', auth()->user()->dinomination_id)->pluck('id'))->pluck('name','id');
+                    }else if(auth()->user()->hasRole('Diocese Admin')){
+                        return ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('name','id');
+                    }
+                })
                 ->required()
-                ->visible(auth()->user()->hasRole('Diocese Admin')),
+                ->visible(auth()->user()->hasRole('Diocese Admin') || auth()->user()->hasRole('Dinomination Admin'))
+                ->live(),
 
                 TextInput::make('name')
                     ->required()
                     ->unique(modifyRuleUsing: function(Unique $rule, $state, Get $get) {
-                        return $rule->where('name', $state)
-                                    ->where('church_district_id', $get('church_district_id'));
+                        return $rule->where('name', $state);
                     }, ignoreRecord:true),
-
                 // Select::make('church_type')
                 //     ->options(function () {
                 //         if((auth()->user()->hasRole('Parish Admin'))){
@@ -109,6 +114,8 @@ class ChurchResource extends Resource
                                 return 'parish';
                             }else if(auth()->user()->checkPermissionTo('create Church') && auth()->user()->hasRole('Diocese Admin')){
                                 return 'diocese';
+                            }else if(auth()->user()->checkPermissionTo('create Church') && auth()->user()->hasRole('Dinomination Admin')){
+                                return 'dinomination';
                             }
                         }
                      }),
@@ -141,58 +148,186 @@ class ChurchResource extends Resource
                     ->reactive()
                     ->searchable()
                     ->label('Region')
-                    ->options(function(){
-                        if(auth()->user()->hasRole('Diocese Admin')){
-                            $diocese = Diocese::whereId(auth()->user()->diocese_id)->pluck('regions');
-                            $diocese = $diocese->flatten();
-                            return Region::whereIn('name', $diocese)->pluck('name', 'id');
-                        }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
-                            $churchdistricts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('regions');
-                            $churchdistricts = $churchdistricts->flatten();
-                            return Region::whereIn('name', $churchdistricts)->pluck('name', 'id');
-                        }else if(auth()->user()->hasRole('Parish Admin')){
-                            $churches = Church::whereId(auth()->user()->church_id)->first();
-                            return Region::whereId($churches->region_id)->pluck('name', 'id');
+                    ->options(function(Get $get){
+                        if(auth()->user()->hasRole('Dinomination Admin') || auth()->user()->hasRole('Diocese Admin')){
+                            if(blank($get("church_district"))){
+                                return [];
+                            }else{
+                                $churchDistrict = ChurchDistrict::whereId($get("church_district"))->pluck('regions');
+                                $churchDistrict = $churchDistrict->flatten();
+                                return Region::whereIn('name',$churchDistrict)->pluck('name','id');
+                            }
+                        }else{
+                            if(blank($get('church_district_id'))){
+                                return [];
+                            }
+                            else if(auth()->user()->hasRole('Parish Admin')){
+                                $churches = Church::whereId(auth()->user()->church_id)->first();
+                                return Region::whereId($churches->region_id)->pluck('name', 'id');
+                            }
+                            else{
+                                $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->pluck('regions');
+                                $churchDistrict = $churchDistrict->flatten();
+                                return Region::whereIn('name',$churchDistrict)->pluck('name','id');
+                            }
                         }
+
+                        // if(auth()->user()->hasRole('Diocese Admin')){
+                        //     $diocese = Diocese::whereId(auth()->user()->diocese_id)->pluck('regions');
+                        //     $diocese = $diocese->flatten();
+                        //     return Region::whereIn('name', $diocese)->pluck('name', 'id');
+                        // }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
+                        //     $churchdistricts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('regions');
+                        //     $churchdistricts = $churchdistricts->flatten();
+                        //     return Region::whereIn('name', $churchdistricts)->pluck('name', 'id');
+                        // }else if(auth()->user()->hasRole('Parish Admin')){
+                        //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //     return Region::whereId($churches->region_id)->pluck('name', 'id');
+                        // }else if(auth()->user()->hasRole('Dinomination Admin')){
+                        //     if(blank($get("church_district"))){
+                        //         return [];
+                        //     }else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district"))->pluck('regions');
+                        //         $churchDistrict = $churchDistrict->flatten();
+                        //         return Region::whereIn('name',$churchDistrict)->pluck('name','id');
+                        //     }
+                        // }
                     })
-                    ->visible(function(){
-                        if(auth()->user()->hasRole('Diocese Admin')){
-                            $diocese = Diocese::whereId(auth()->user()->diocese_id)->pluck('regions');
-                            $diocese = $diocese->flatten();
-                            if($diocese->count() == 1){
-                                return false;
-                            }else{
-                                return true;
-                            }
-                        }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
-                            $churchdistricts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('regions');
-                            $churchdistricts = $churchdistricts->flatten();
-                            if($churchdistricts->count() == 1){
-                                return false;
-                            }else{
-                                return true;
-                            }
-                        }else if(auth()->user()->hasRole('Parish Admin')){
+                    ->visible(function(Get $get){
+                        if(auth()->user()->hasRole('Parish Admin')){
                             return false;
                         }
+                        else if(blank($get('church_district_id'))){
+                            return true;
+                        }
+                        else{
+                            $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->pluck('regions');
+                            $churchDistrict = $churchDistrict->flatten();
+                            
+                            if($churchDistrict->count() == 1){
+                                return false;
+                            }else{
+                                return true;
+                            }
+                        }
+                        // if(auth()->user()->hasRole('Dinomination Admin') || auth()->user()->hasRole('Diocese Admin')){
+                        //     if(blank($get("church_district"))){
+                        //         return true;
+                        //     }else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district"))->pluck('regions');
+                        //         $churchDistrict = $churchDistrict->flatten();
+                        //         if($churchDistrict->count() == 1){
+                        //             return false;
+                        //         }else{
+                        //             return true;
+                        //         }
+                        //     }
+                        // }else{
+                        //     if(blank($get('church_district_id'))){
+                        //         return true;
+                        //     }
+                        //     else if(auth()->user()->hasRole('Parish Admin')){
+                        //         return false;
+                        //     }
+                        //     else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->pluck('regions');
+                        //         $churchDistrict = $churchDistrict->flatten();
+                                
+                        //         if($churchDistrict->count() == 1){
+                        //             return false;
+                        //         }else{
+                        //             return true;
+                        //         }
+                        //     }
+                        // }
+
+                        // if(auth()->user()->hasRole('Diocese Admin')){
+                        //     $diocese = Diocese::whereId(auth()->user()->diocese_id)->pluck('regions');
+                        //     $diocese = $diocese->flatten();
+                        //     if($diocese->count() == 1){
+                        //         return false;
+                        //     }else{
+                        //         return true;
+                        //     }
+                        // }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
+                        //     $churchdistricts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('regions');
+                        //     $churchdistricts = $churchdistricts->flatten();
+                        //     if($churchdistricts->count() == 1){
+                        //         return false;
+                        //     }else{
+                        //         return true;
+                        //     }
+                        // }else if(auth()->user()->hasRole('Parish Admin')){
+                        //     return false;
+                        // }else if(auth()->user()->hasRole('Dinomination Admin')){
+                        //     return true;
+                        // }
                     })
-                    ->default(function(){
-                        if(auth()->user()->hasRole('Diocese Admin')){
-                            $diocese = Diocese::whereId(auth()->user()->diocese_id)->pluck('regions');
-                            $diocese = $diocese->flatten();
-                            if($diocese->count() == 1){
-                                return Region::whereIn('name', $diocese)->pluck('id');
-                            }
-                        }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
-                            $churchdistricts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('regions');
-                            $churchdistricts = $churchdistricts->flatten();
-                            if($churchdistricts->count() == 1){
-                                return Region::whereIn('name', $churchdistricts)->pluck('id');
-                            }
+                    ->default(function(Get $get, Set $set){
+                        if(blank($get('church_district_id'))){
+                            return [];
                         }else if(auth()->user()->hasRole('Parish Admin')){
                             $churches = Church::whereId(auth()->user()->church_id)->first();
                             return $churches->region_id;
                         }
+                        else{
+                            $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->pluck('regions');
+                            $churchDistrict = $churchDistrict->flatten();
+
+                            if($churchDistrict->count() == 1){
+                                return Region::whereIn('name', $churchDistrict)->pluck('id');
+                            }
+                        }
+                        // if(auth()->user()->hasRole('Dinomination Admin') || auth()->user()->hasRole('Diocese Admin')){
+                        //     if(blank($get("church_district"))){
+                        //         return [];
+                        //     }else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district"))->pluck('regions');
+                        //         $churchDistrict = $churchDistrict->flatten();
+                                
+                        //         if($churchDistrict->count() == 1){
+                        //             return Region::whereIn('name', $churchDistrict)->pluck('id')[0];
+                        //         }
+                        //     }
+                        // }else{
+                        //     if(blank($get('church_district_id'))){
+                        //         return [];
+                        //     }else if(auth()->user()->hasRole('Parish Admin')){
+                        //         $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //         return $churches->region_id;
+                        //     }
+                        //     else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->pluck('regions');
+                        //         $churchDistrict = $churchDistrict->flatten();
+
+                        //         if($churchDistrict->count() == 1){
+                        //             return Region::whereIn('name', $churchDistrict)->pluck('id');
+                        //         }
+                        //     }
+                        // }
+
+                        // if(auth()->user()->hasRole('Diocese Admin')){
+                        //     $diocese = Diocese::whereId(auth()->user()->diocese_id)->pluck('regions');
+                        //     $diocese = $diocese->flatten();
+                        //     if($diocese->count() == 1){
+                        //         return Region::whereIn('name', $diocese)->pluck('id');
+                        //     }
+                        // }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
+                        //     $churchdistricts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('regions');
+                        //     $churchdistricts = $churchdistricts->flatten();
+                        //     if($churchdistricts->count() == 1){
+                        //         return Region::whereIn('name', $churchdistricts)->pluck('id');
+                        //     }
+                        // }else if(auth()->user()->hasRole('Parish Admin')){
+                        //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //     return $churches->region_id;
+                        // }else if(auth()->user()->hasRole('Dinomination Admin')){
+                        //     $churchDistrict = ChurchDistrict::whereId($get("church_district"))->pluck('regions');
+                        //     $churchDistrict = $churchDistrict->flatten();
+                        //     if($churchDistrict->count() == 1){
+                        //         return Region::whereIn('name', $churchDistrict)->pluck('id');
+                        //     }
+                        // }
 
                     })
                     ->required()
@@ -200,24 +335,103 @@ class ChurchResource extends Resource
                         $set('district_id', []);
                     }),
 
+
                 Hidden::make('region')
-                    ->default(function(){
-                        if(auth()->user()->hasRole('Diocese Admin')){
-                            $diocese = Diocese::whereId(auth()->user()->diocese_id)->pluck('regions');
-                            $diocese = $diocese->flatten();
-                            if($diocese->count() == 1){
-                                return Region::whereIn('name', $diocese)->pluck('id')[0];
+                    ->default(function(Get $get){
+                        if(auth()->user()->hasRole('Dinomination Admin') || auth()->user()->hasRole('Diocese Admin')){
+                            return null;
+                        }else{
+                            if(auth()->user()->hasRole('Parish Admin')){
+                                $churches = Church::whereId(auth()->user()->church_id)->first();
+                                return $churches->region_id;
                             }
-                        }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
-                            $churchdistricts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('regions');
-                            $churchdistricts = $churchdistricts->flatten();
-                            if($churchdistricts->count() == 1){
-                                return Region::whereIn('name', $churchdistricts)->pluck('id')[0];
+                            else if(blank($get('church_district_id'))){
+                                return null;
                             }
-                        }else if(auth()->user()->hasRole('Parish Admin')){
-                            $churches = Church::whereId(auth()->user()->church_id)->first();
-                            return $churches->region_id;
+                            // else if(auth()->user()->hasRole('Parish Admin')){
+                            //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                            //     return $churches->region_id;
+                            // }
+                            else{
+                                $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->pluck('regions');
+                                $churchDistrict = $churchDistrict->flatten();
+
+                                if($churchDistrict->count() == 1){
+                                    return Region::whereIn('name', $churchDistrict)->pluck('id')[0];
+                                }
+                            }
                         }
+                        // if(auth()->user()->hasRole('Dinomination Admin') || auth()->user()->hasRole('Diocese Admin')){
+                        //     if(blank($get("church_district"))){
+                        //         return null;
+                        //     }else{
+                        //         return $get("church_district");
+                        //         $churchDistrict = ChurchDist                        // if(auth()->user()->hasRole('Dinomination Admin') || auth()->user()->hasRole('Diocese Admin')){
+                        //     if(blank($get("church_district"))){
+                        //         return null;
+                        //     }else{
+                        //         return $get("church_district");
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district"))->pluck('regions');
+                        //         $churchDistrict = $churchDistrict->flatten();
+                                
+                        //         if($churchDistrict->count() == 1){
+                        //             return Region::whereIn('name', $churchDistrict)->pluck('id')[0];
+                        //         }
+                        //     }
+                        // }else{
+                        //     if(blank($get('church_district_id'))){
+                        //         return null;
+                        //     }else if(auth()->user()->hasRole('Parish Admin')){
+                        //         $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //         return $churches->region_id;
+                        //     }
+                        //     else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->pluck('regions');
+                        //         $churchDistrict = $churchDistrict->flatten();
+
+                        //         if($churchDistrict->count() == 1){
+                        //             return Region::whereIn('name', $churchDistrict)->pluck('id')[0];
+                        //         }
+                        //     }
+                        // }rict::whereId($get("church_district"))->pluck('regions');
+                        //         $churchDistrict = $churchDistrict->flatten();
+                                
+                        //         if($churchDistrict->count() == 1){
+                        //             return Region::whereIn('name', $churchDistrict)->pluck('id')[0];
+                        //         }
+                        //     }
+                        // }else{
+                        //     if(blank($get('church_district_id'))){
+                        //         return null;
+                        //     }else if(auth()->user()->hasRole('Parish Admin')){
+                        //         $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //         return $churches->region_id;
+                        //     }
+                        //     else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->pluck('regions');
+                        //         $churchDistrict = $churchDistrict->flatten();
+
+                        //         if($churchDistrict->count() == 1){
+                        //             return Region::whereIn('name', $churchDistrict)->pluck('id')[0];
+                        //         }
+                        //     }
+                        // }
+                        // if(auth()->user()->hasRole('Diocese Admin')){
+                        //     $diocese = Diocese::whereId(auth()->user()->diocese_id)->pluck('regions');
+                        //     $diocese = $diocese->flatten();
+                        //     if($diocese->count() == 1){
+                        //         return Region::whereIn('name', $diocese)->pluck('id')[0];
+                        //     }
+                        // }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
+                        //     $churchdistricts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('regions');
+                        //     $churchdistricts = $churchdistricts->flatten();
+                        //     if($churchdistricts->count() == 1){
+                        //         return Region::whereIn('name', $churchdistricts)->pluck('id')[0];
+                        //     }
+                        // }else if(auth()->user()->hasRole('Parish Admin')){
+                        //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //     return $churches->region_id;
+                        // }
                     }),
 
                 Select::make('district_id')
@@ -225,37 +439,109 @@ class ChurchResource extends Resource
                     ->searchable()
                     ->label('District')
                     ->options(function (Get $get) {
-                        if (blank($get('region_id'))) {
+                        if (blank($get('region_id')) && (! auth()->user()->hasRole('Parish Admin'))) {
                             return [];
                         }
 
-                        if(auth()->user()->hasRole('Diocese Admin')){
-                            $diocese = Diocese::whereId(auth()->user()->diocese_id)->first();
-                            $regions = []; $districts = [];
-                            foreach($diocese->districts as $key => $district){
-                                $regions[] = $district[$diocese->regions[$key]];
-                                $districts = array_merge($districts, District::whereIn('id', $district[$diocese->regions[$key]])->pluck('id' )->toArray());
-                            }
+                        if(auth()->user()->hasRole('Dinomination Admin') || auth()->user()->hasRole('Diocese Admin')){
+                            if(blank($get("church_district"))){
+                                return [];
+                            }else{
+                                $churchDistrict = ChurchDistrict::whereId($get("church_district"))->first();
+                                $regions = []; $districts = [];
+                                foreach($churchDistrict->districts as $key => $district){
+                                    $regions[] = $district[$churchDistrict->regions[$key]];
+                                    $districts = array_merge($districts, District::whereIn('id', $district[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                                }
 
-                            return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
-                        }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
-                            $districts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('districts');
-                            $districts = $districts->flatten();
-    
-                            return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
-                        }else if(auth()->user()->hasRole('Parish Admin')){
-                            $churches = Church::whereId(auth()->user()->church_id)->first();
-                            return $churches->district_id;
+                                if(blank($get('region_id'))){
+                                    return District::whereIn('id', $districts)->where('region_id', $get('region'))->pluck('name', 'id');
+                                }else{
+                                    return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
+                                }
+                            }
+                        }else{
+                            if(auth()->user()->hasRole('Parish Admin')){
+                                //get church district id
+                                $church_district_id = Church::whereId(auth()->user()->church_id)->first();
+                                $churchDistrict = ChurchDistrict::whereId($church_district_id->church_district_id)->first();
+                                $regions = []; $districts = [];
+                                foreach($churchDistrict->districts as $key => $district){
+                                    $regions[] = $district[$churchDistrict->regions[$key]];
+                                    $districts = array_merge($districts, District::whereIn('id', $district[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                                }
+
+                                if(blank($get('region_id'))){
+                                    return District::whereIn('id', $districts)->where('region_id', $get('region'))->pluck('name', 'id');
+                                }else{
+                                    return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
+                                }
+                            }
+                            else if(blank($get('church_district_id'))){
+                                return [];
+                            }
+                            // else if(auth()->user()->hasRole('Parish Admin')){
+                            //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                            //     return $churches->district_id;
+                            // }
+                            else{
+                                $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->first();
+                                $regions = []; $districts = [];
+                                foreach($churchDistrict->districts as $key => $district){
+                                    $regions[] = $district[$churchDistrict->regions[$key]];
+                                    $districts = array_merge($districts, District::whereIn('id', $district[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                                }
+
+                                if(blank($get('region_id'))){
+                                    return District::whereIn('id', $districts)->where('region_id', $get('region'))->pluck('name', 'id');
+                                }else{
+                                    return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
+                                }
+                            }
                         }
 
+                        // if(auth()->user()->hasRole('Diocese Admin')){
+                        //     $diocese = Diocese::whereId(auth()->user()->diocese_id)->first();
+                        //     $regions = []; $districts = [];
+                        //     foreach($diocese->districts as $key => $district){
+                        //         $regions[] = $district[$diocese->regions[$key]];
+                        //         $districts = array_merge($districts, District::whereIn('id', $district[$diocese->regions[$key]])->pluck('id' )->toArray());
+                        //     }
+
+                        //     return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
+                        // }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
+                        //     $districts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('districts');
+                        //     $districts = $districts->flatten();
+    
+                        //     return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
+                        // }else if(auth()->user()->hasRole('Parish Admin')){
+                        //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //     return $churches->district_id;
+                        // }else if(auth()->user()->hasRole('Dinomination Admin')){
+                        //     if(blank($get("church_district"))){
+                        //         return [];
+                        //     }else{
+                        //         $districts = ChurchDistrict::whereId($get("church_district"))->pluck('districts');
+                        //         $districts = $districts->flatten();
+
+                        //         return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
+                        //     }
+                        // }
+
                     })
-                    ->visible(function(){
-                        if(auth()->user()->hasRole('Diocese Admin')){
-                            $diocese = Diocese::whereId(auth()->user()->diocese_id)->first();
+                    ->visible(function(Get $get){
+                        if(blank($get('church_district_id')) && (! auth()->user()->hasRole('Parish Admin'))){
+                            return true;
+                        }
+                        else if(auth()->user()->hasRole('Parish Admin')){
+                            return true;
+                        }
+                        else{
+                            $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->first();
                             $regions = []; $districts = [];
-                            foreach($diocese->districts as $key => $district){
-                                $regions[] = $district[$diocese->regions[$key]];
-                                $districts = array_merge($districts, District::whereIn('id', $district[$diocese->regions[$key]])->pluck('id' )->toArray());
+                            foreach($churchDistrict->districts as $key => $district){
+                                $regions[] = $district[$churchDistrict->regions[$key]];
+                                $districts = array_merge($districts, District::whereIn('id', $district[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
                             }
 
                             if(count($districts) == 1){
@@ -263,43 +549,166 @@ class ChurchResource extends Resource
                             }else{
                                 return true;
                             }
-                        }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
-                            $districts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('districts');
-                            $districts = $districts->flatten();
-    
-                            if($districts->count() == 1){
-                                return false;
-                            }else{
-                                return true;
-                            }
-                        }else if(auth()->user()->hasRole('Parish Admin')){
-                            return false;
                         }
+                        // if(auth()->user()->hasRole('Dinomination Admin') || auth()->user()->hasRole('Diocese Admin')){
+                        //     if(blank($get("church_district"))){
+                        //         return true;
+                        //     }else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district"))->first();
+                        //         $regions = []; $districts = [];
+                        //         foreach($churchDistrict->districts as $key => $district){
+                        //             $regions[] = $district[$churchDistrict->regions[$key]];
+                        //             $districts = array_merge($districts, District::whereIn('id', $district[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                        //         }
+
+                        //         if(count($districts) == 1){
+                        //             return false;
+                        //         }else{
+                        //             return true;
+                        //         }
+                        //     }
+                        // }else{
+                        //     if(blank($get('church_district_id'))){
+                        //         return true;
+                        //     }
+                        //     // else if(auth()->user()->hasRole('Parish Admin')){
+                        //     //     return false;
+                        //     // }
+                        //     else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->first();
+                        //         $regions = []; $districts = [];
+                        //         foreach($churchDistrict->districts as $key => $district){
+                        //             $regions[] = $district[$churchDistrict->regions[$key]];
+                        //             $districts = array_merge($districts, District::whereIn('id', $district[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                        //         }
+
+                        //         if(count($districts) == 1){
+                        //             return false;
+                        //         }else{
+                        //             return true;
+                        //         }
+                        //     }
+                        // }
+
+                        // if(auth()->user()->hasRole('Diocese Admin')){
+                        //     $diocese = Diocese::whereId(auth()->user()->diocese_id)->first();
+                        //     $regions = []; $districts = [];
+                        //     foreach($diocese->districts as $key => $district){
+                        //         $regions[] = $district[$diocese->regions[$key]];
+                        //         $districts = array_merge($districts, District::whereIn('id', $district[$diocese->regions[$key]])->pluck('id' )->toArray());
+                        //     }
+
+                        //     if(count($districts) == 1){
+                        //         return false;
+                        //     }else{
+                        //         return true;
+                        //     }
+                        // }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
+                        //     $districts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('districts');
+                        //     $districts = $districts->flatten();
+    
+                        //     if($districts->count() == 1){
+                        //         return false;
+                        //     }else{
+                        //         return true;
+                        //     }
+                        // }else if(auth()->user()->hasRole('Parish Admin')){
+                        //     return false;
+                        // }else if(auth()->user()->hasRole('Dinomination Admin')){
+                        //     return true;
+                        // }
 
                     })
-                    ->default(function(){
-                        if(auth()->user()->hasRole('Diocese Admin')){
-                            $diocese = Diocese::whereId(auth()->user()->diocese_id)->first();
+                    ->default(function(Get $get){
+                        if(auth()->user()->hasRole('Parish Admin')){
+                            $churches = Church::whereId(auth()->user()->church_id)->first();
+                            return $churches->district_id;
+                        }
+                        else if(blank($get('church_district_id'))){
+                            return [];
+                        }
+                        // else if(auth()->user()->hasRole('Parish Admin')){
+                        //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //     return $churches->district_id;
+                        // }
+                        else{
+                            $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->first();
                             $regions = []; $districts = [];
-                            foreach($diocese->districts as $key => $district){
-                                $regions[] = $district[$diocese->regions[$key]];
-                                $districts = array_merge($districts, District::whereIn('id', $district[$diocese->regions[$key]])->pluck('id' )->toArray());
+                            foreach($churchDistrict->districts as $key => $district){
+                                $regions[] = $district[$churchDistrict->regions[$key]];
+                                $districts = array_merge($districts, District::whereIn('id', $district[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
                             }
+
+                            if(count($districts) == 1){
+                                return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
+                            }
+                        }
+                        // if(auth()->user()->hasRole('Dinomination Admin') || auth()->user()->hasRole('Diocese Admin')){
+                        //     if(blank($get("church_district"))){
+                        //         return [];
+                        //     }else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district"))->first();
+                        //         $regions = []; $districts = [];
+                        //         foreach($churchDistrict->districts as $key => $district){
+                        //             $regions[] = $district[$churchDistrict->regions[$key]];
+                        //             $districts = array_merge($districts, District::whereIn('id', $district[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                        //         }
+
+                        //         if(count($districts) == 1){
+                        //             return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
+                        //         }
+                        //     }
+                        // }else{
+                        //     if(blank($get('church_district_id'))){
+                        //         return [];
+                        //     }
+                        //     // else if(auth()->user()->hasRole('Parish Admin')){
+                        //     //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //     //     return $churches->district_id;
+                        //     // }
+                        //     else{
+                        //         $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->first();
+                        //         $regions = []; $districts = [];
+                        //         foreach($churchDistrict->districts as $key => $district){
+                        //             $regions[] = $district[$churchDistrict->regions[$key]];
+                        //             $districts = array_merge($districts, District::whereIn('id', $district[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                        //         }
+
+                        //         if(count($districts) == 1){
+                        //             return District::whereIn('id', $districts)->where('region_id', $get('region_id'))->pluck('name', 'id');
+                        //         }
+                        //     }
+                        // }
+
+                        // if(auth()->user()->hasRole('Diocese Admin')){
+                        //     $diocese = Diocese::whereId(auth()->user()->diocese_id)->first();
+                        //     $regions = []; $districts = [];
+                        //     foreach($diocese->districts as $key => $district){
+                        //         $regions[] = $district[$diocese->regions[$key]];
+                        //         $districts = array_merge($districts, District::whereIn('id', $district[$diocese->regions[$key]])->pluck('id' )->toArray());
+                        //     }
                              
-                            if(count($districts) == 1){
-                                return District::whereIn('id', $districts)->pluck('id');
-                            }
-                        }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
-                            $districts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('districts');
-                            $districts = $districts->flatten();
+                        //     if(count($districts) == 1){
+                        //         return District::whereIn('id', $districts)->pluck('id');
+                        //     }
+                        // }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
+                        //     $districts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('districts');
+                        //     $districts = $districts->flatten();
     
-                            if($districts->count() == 1){
-                                return District::whereIn('id', $districts)->pluck('id');
-                            }
-                        }else if(auth()->user()->hasRole('Parish Admin')){
-                            $churches = Church::whereId(auth()->user()->church_id)->first();
-                            return $churches->district_id;
-                        }
+                        //     if($districts->count() == 1){
+                        //         return District::whereIn('id', $districts)->pluck('id');
+                        //     }
+                        // }else if(auth()->user()->hasRole('Parish Admin')){
+                        //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //     return $churches->district_id;
+                        // }else if(auth()->user()->hasRole('Dinomination Admin')){
+                        //     $districts = ChurchDistrict::whereId($get("church_district"))->pluck('districts');
+                        //     $districts = $districts->flatten();
+    
+                        //     if($districts->count() == 1){
+                        //         return District::whereIn('id', $districts)->pluck('id');
+                        //     }
+                        // }
 
                     })
                     ->reactive()
@@ -311,16 +720,7 @@ class ChurchResource extends Resource
                 Hidden::make('district')
                     ->default(function(){
                         if(auth()->user()->hasRole('Diocese Admin')){
-                            $diocese = Diocese::whereId(auth()->user()->diocese_id)->first();
-                            $regions = []; $districts = [];
-                            foreach($diocese->districts as $key => $district){
-                                $regions[] = $district[$diocese->regions[$key]];
-                                $districts = array_merge($districts, District::whereIn('id', $district[$diocese->regions[$key]])->pluck('id' )->toArray());
-                            }
-                             
-                            if(count($districts) == 1){
-                                return District::whereIn('id', $districts)->pluck('id')[0];
-                            }
+                            return null;
                         }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
                             $districts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('districts');
                             $districts = $districts->flatten();
@@ -329,9 +729,31 @@ class ChurchResource extends Resource
                                 return District::whereIn('id', $districts)->pluck('id')[0];
                             }
                         }else if(auth()->user()->hasRole('Parish Admin')){
-                            $churches = Church::whereId(auth()->user()->church_id)->first();
-                            return $churches->district_id;
+                            return null;
                         }
+
+                        // if(auth()->user()->hasRole('Diocese Admin')){
+                        //     $diocese = Diocese::whereId(auth()->user()->diocese_id)->first();
+                        //     $regions = []; $districts = [];
+                        //     foreach($diocese->districts as $key => $district){
+                        //         $regions[] = $district[$diocese->regions[$key]];
+                        //         $districts = array_merge($districts, District::whereIn('id', $district[$diocese->regions[$key]])->pluck('id' )->toArray());
+                        //     }
+                             
+                        //     if(count($districts) == 1){
+                        //         return District::whereIn('id', $districts)->pluck('id')[0];
+                        //     }
+                        // }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
+                        //     $districts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('districts');
+                        //     $districts = $districts->flatten();
+    
+                        //     if($districts->count() == 1){
+                        //         return District::whereIn('id', $districts)->pluck('id')[0];
+                        //     }
+                        // }else if(auth()->user()->hasRole('Parish Admin')){
+                        //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //     return $churches->district_id;
+                        // }
                     }),
 
                 Select::make('ward_id')
@@ -339,41 +761,100 @@ class ChurchResource extends Resource
                     ->searchable()
                     ->label('Ward')
                     ->options(function (Get $get) {
-                        if (blank($get('district_id'))) {
+                        if (blank($get('district_id')) && (! auth()->user()->hasRole('Parish Admin'))) {
                             return [];
+                        }
+
+                        if(auth()->user()->hasRole('Dinomination Admin') || auth()->user()->hasRole('Diocese Admin')){
+                            if(blank($get("church_district"))){
+                                return [];
+                            }else{
+                                $churchDistrict = ChurchDistrict::whereId($get("church_district"))->first();
+                                $regions = []; $wards = [];
+                                foreach($churchDistrict->wards as $key => $ward){
+                                    $regions[] = $ward[$churchDistrict->regions[$key]];
+                                    $wards = array_merge($wards, Ward::whereIn('id', $ward[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                                }
+                                if(blank($get('district_id'))){
+                                    return Ward::whereIn('id', $wards)->where('district_id', $get('district'))->pluck('name', 'id');
+                                }else{
+                                    return Ward::whereIn('id', $wards)->where('district_id', $get('district_id'))->pluck('name', 'id');
+                                }
+                            }
+                        }else{
+                            if(auth()->user()->hasRole('Parish Admin')){
+                                $church_district_id = Church::whereId(auth()->user()->church_id)->first();
+                                $churchDistrict = ChurchDistrict::whereId($church_district_id->church_district_id)->first();
+
+                                $regions = []; $wards = [];
+                                foreach($churchDistrict->wards as $key => $ward){
+                                    $regions[] = $ward[$churchDistrict->regions[$key]];
+                                    $wards = array_merge($wards, Ward::whereIn('id', $ward[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                                }
+
+                                if(blank($get('district_id'))){
+                                    return Ward::whereIn('id', $wards)->where('district_id', $get('district'))->pluck('name', 'id');
+                                }else{
+                                    return Ward::whereIn('id', $wards)->where('district_id', $get('district_id'))->pluck('name', 'id');
+                                }
+                            }
+                            else if(blank($get('church_district_id'))){
+                                return [];
+                            }else{
+                                $churchDistrict = ChurchDistrict::whereId($get("church_district_id"))->first();
+                                $regions = []; $wards = [];
+                                foreach($churchDistrict->wards as $key => $ward){
+                                    $regions[] = $ward[$churchDistrict->regions[$key]];
+                                    $wards = array_merge($wards, Ward::whereIn('id', $ward[$churchDistrict->regions[$key]])->pluck('id' )->toArray());
+                                }
+
+                                if(blank($get('district_id'))){
+                                    return Ward::whereIn('id', $wards)->where('district_id', $get('district'))->pluck('name', 'id');
+                                }else{
+                                    return Ward::whereIn('id', $wards)->where('district_id', $get('district_id'))->pluck('name', 'id');
+                                }
+                            }
                         }
 
                         // $wards = ChurchDistrict::whereId(Church::whereId(auth()->user()->church_id)->pluck('church_district_id'))->pluck('wards');
                         // $wards = $wards->flatten();
 
                         // return Ward::whereIn('id', $wards)->where('district_id', $get('district_id'))->pluck('name', 'id');
-                        if(auth()->user()->hasRole('Diocese Admin')){
-                            $diocese = Diocese::whereId(auth()->user()->diocese_id)->first();
-                            $regions = []; $districts = [];
-                            foreach($diocese->districts as $key => $district){
-                                $regions[] = $district[$diocese->regions[$key]];
-                                $districts = array_merge($districts, District::whereIn('id', $district[$diocese->regions[$key]])->pluck('id' )->toArray());
-                            }
+                        // if(auth()->user()->hasRole('Diocese Admin')){
+                        //     $diocese = Diocese::whereId(auth()->user()->diocese_id)->first();
+                        //     $regions = []; $districts = [];
+                        //     foreach($diocese->districts as $key => $district){
+                        //         $regions[] = $district[$diocese->regions[$key]];
+                        //         $districts = array_merge($districts, District::whereIn('id', $district[$diocese->regions[$key]])->pluck('id' )->toArray());
+                        //     }
 
-                            if(count($districts) == 1){
-                                return Ward::whereIn('district_id', $districts)->pluck('name', 'id');
-                            }else{
-                                return Ward::all()->where('district_id', $get('district_id'))->pluck('name', 'id');
-                            }
-                        }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
-                            $districts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('districts');
-                            $districts = $districts->flatten();
-                            if($districts->count() == 1){
-                                return Ward::whereIn('district_id', $districts)->pluck('name', 'id');
-                            }else{
-                                return Ward::all()->where('district_id', $get('district_id'))->pluck('name', 'id');
-                            }
-                        }else if(auth()->user()->hasRole('Parish Admin')){
-                            $churches = Church::whereId(auth()->user()->church_id)->first();
-                            return Ward::all()->where('district_id', $get('district_id') ?? $get('district'))->pluck('name', 'id');
-                        }
+                        //     if(count($districts) == 1){
+                        //         return Ward::whereIn('district_id', $districts)->pluck('name', 'id');
+                        //     }else{
+                        //         return Ward::all()->where('district_id', $get('district_id'))->pluck('name', 'id');
+                        //     }
+                        // }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
+                        //     $districts = ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('districts');
+                        //     $districts = $districts->flatten();
+                        //     if($districts->count() == 1){
+                        //         return Ward::whereIn('district_id', $districts)->pluck('name', 'id');
+                        //     }else{
+                        //         return Ward::all()->where('district_id', $get('district_id'))->pluck('name', 'id');
+                        //     }
+                        // }else if(auth()->user()->hasRole('Parish Admin')){
+                        //     $churches = Church::whereId(auth()->user()->church_id)->first();
+                        //     return Ward::all()->where('district_id', $get('district_id') ?? $get('district'))->pluck('name', 'id');
+                        // }else if(auth()->user()->hasRole('Dinomination Admin')){
+                        //     $districts = ChurchDistrict::whereId($get("church_district"))->pluck('districts');
+                        //     $districts = $districts->flatten();
+                        //     if($districts->count() == 1){
+                        //         return Ward::whereIn('district_id', $districts)->pluck('name', 'id');
+                        //     }else{
+                        //         return Ward::all()->where('district_id', $get('district_id'))->pluck('name', 'id');
+                        //     }
+                        // }
 
-                    })
+                    })->required(),
                     // ->visible(function(){
                     //     $wards = ChurchDistrict::whereId(Church::whereId(auth()->user()->church_id)->pluck('church_district_id'))->pluck('wards');
                     //     $wards = $wards->flatten();
@@ -392,7 +873,7 @@ class ChurchResource extends Resource
                     //         return Ward::whereIn('id', $wards)->pluck('id');
                     //     }
                     // })
-                    ->required(),
+                    // ->required(),
 
                 Toggle::make('church_location_status')
                     ->onColor('success')
@@ -456,7 +937,19 @@ class ChurchResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                ->visible( auth()->user()->checkPermissionTo('update Church')),
+                ->visible(function($record){
+                    if(auth()->user()->hasRole('Dinomination Admin') && $record->church_type == 'dinomination' && auth()->user()->checkPermissionTo('update Church')){
+                        return true;
+                    }else if(auth()->user()->hasRole('Diocese Admin') && $record->church_type == 'diocese' && auth()->user()->checkPermissionTo('update Church')){
+                        return true;
+                    }else if(auth()->user()->hasRole('ChurchDistrict Admin') && $record->church_type == 'parish' && auth()->user()->checkPermissionTo('update Church')){
+                        return true;
+                    }else if(auth()->user()->hasRole('Parish Admin') && $record->church_type == 'sub_parish' && auth()->user()->checkPermissionTo('update Church')){
+                        return true;
+                    }else{
+                        return false;
+                    }
+                }),
                 Tables\Actions\Action::make('assign_pastor')
                     ->label(fn($record) => $record->pastors == Null ? 'Assign Pastor' : (count($record->pastors) == 0 ? 'Assign Pastor' : 'Pastor Assigned'))
                     ->form([
@@ -516,7 +1009,19 @@ class ChurchResource extends Resource
                             ->send();
 
                     })
-                    ->visible(auth()->user()->checkPermissionTo('assign Pastor')),
+                    ->visible(function($record){
+                        if(auth()->user()->hasRole('Dinomination Admin') && $record->church_type == 'dinomination' && auth()->user()->checkPermissionTo('assign Pastor')){
+                            return true;
+                        }else if(auth()->user()->hasRole('Diocese Admin') && $record->church_type == 'diocese' && auth()->user()->checkPermissionTo('assign Pastor')){
+                            return true;
+                        }else if(auth()->user()->hasRole('ChurchDistrict Admin') && $record->church_type == 'parish' && auth()->user()->checkPermissionTo('assign Pastor')){
+                            return true;
+                        }else if(auth()->user()->hasRole('Parish Admin') && $record->church_type == 'sub_parish' && auth()->user()->checkPermissionTo('assign Pastor')){
+                            return true;
+                        }else {
+                            return false;
+                        }
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

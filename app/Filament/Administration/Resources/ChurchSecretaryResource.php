@@ -275,19 +275,25 @@ class ChurchSecretaryResource extends Resource
                         Select::make('church_assigned_id')
                             ->label('Assigned Church')
                             ->required()
+                            ->live()
                             ->options(function(Get $get){
                                 if(auth()->user()->hasRole('ChurchDistrict Admin')){
-                                    return Church::where('church_district_id', auth()->user()->church_district_id)->pluck('name', 'id');
+                                    return Church::where('church_district_id', auth()->user()->church_district_id)->where('church_type', 'parish')->pluck('name', 'id');
                                 }else if(auth()->user()->hasRole('Dinomination Admin')){
                                     if($get('diocese') && $get('church_district')){
-                                        return Church::where('church_district_id', $get('church_district'))->pluck('name', 'id');
+                                        return Church::where('church_district_id', $get('church_district'))->where('church_type', 'dinomination')->pluck('name', 'id');
                                     }else{
                                         return [];
                                     }
                                 }else if(auth()->user()->hasRole('Parish Admin')){
-                                    return Church::where('parent_church', auth()->user()->church_id)->where('church_type', 'sub_parish')->pluck('name', 'id');
+                                    if(ChurchSecretary::where('church_assigned_id',auth()->user()->church_id)->where('title', 'Church Secretary')->exists()){
+                                        return Church::where('parent_church', auth()->user()->church_id)->where('church_type', 'sub_parish')->pluck('name', 'id');
+                                    }else{
+
+                                        return Church::where('parent_church', auth()->user()->church_id)->orwhere('id', auth()->user()->church_id)->whereIn('church_type', ['sub_parish','parish'])->pluck('name', 'id');
+                                    }
                                 }else if(auth()->user()->hasRole('Diocese Admin')){
-                                    return Church::where('church_district_id', $get('church_district'))->pluck('name', 'id');
+                                    return Church::where('church_district_id', $get('church_district'))->where('church_type', 'diocese')->pluck('name', 'id');
                                 }
                             })
                             ->createOptionForm([
@@ -657,9 +663,22 @@ class ChurchSecretaryResource extends Resource
                                     }
                                 }
                             }else if(auth()->user()->hasRole('Parish Admin')){
-                                return [
-                                    'SubParish Secretary' => 'SubParish Secretary'
-                                ];
+                                if(ChurchSecretary::where('church_assigned_id',$get('church_assigned_id'))->where('title', 'Church Secretary')->exists()){
+                                    return [
+                                        'SubParish Secretary' => 'SubParish Secretary'
+                                    ];  
+                                }else{
+                                    if(Church::whereId($get('church_assigned_id'))->where('church_type', 'sub_parish')->exists()){
+                                        return [
+                                            'SubParish Secretary' => 'SubParish Secretary'
+                                        ];  
+                                    }else{
+                                        return [
+                                            'Church Secretary' => 'Church Secretary'
+                                        ];  
+                                    }
+                                }
+
                             }else if(auth()->user()->hasRole('Diocese Admin')){
                                 $diocese_church_districts = ChurchDistrict::where('diocese_id', auth()->user()->diocese_id)->pluck('id');
                                 $diocese_churches = Church::whereIn('church_district_id', $diocese_church_districts)->pluck('id');
@@ -731,7 +750,7 @@ class ChurchSecretaryResource extends Resource
         }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
             return parent::getEloquentQuery()->whereIn('church_assigned_id', Church::whereIn('church_district_id', ChurchDistrict::whereId(auth()->user()->church_district_id)->pluck('id'))->pluck('id'))->whereNotIn('title', ['Bishop Secretary', 'ArchBishop Secretary'])->orderBy('created_at', 'desc');
         }else if(auth()->user()->hasRole('Parish Admin')){
-            return parent::getEloquentQuery()->whereIn('church_assigned_id', Church::where('parent_church', auth()->user()->church_id)->whereNotNull('parent_church')->pluck('id'))->orderBy('created_at', 'desc');
+            return parent::getEloquentQuery()->whereIn('church_assigned_id', Church::where('parent_church', auth()->user()->church_id)->orwhere('id', auth()->user()->church_id)->pluck('id'))->whereIn('title', ['Church Secretary','SubParish Secretary'])->orderBy('created_at', 'desc');
         }
     }
 
