@@ -13,10 +13,12 @@ use App\Models\User;
 class RegistrationResponse implements Responsable
 {
     public $phone;
+    public $church_id;
     
-    public function __construct($phone = null)
+    public function __construct($phone = null, $church_id = null)
     {
         $this->phone = $phone;
+        $this->church_id = $church_id;
     }
 
     public function toResponse($request): RedirectResponse | Redirector
@@ -29,8 +31,15 @@ class RegistrationResponse implements Responsable
             ->send();
             return redirect()->to('/admin/register');
 
-        }else{
-            if(auth()->user()->hasRole('Jumuiya Chairperson') || auth()->user()->hasRole('Jumuiya Accountant') || auth()->user()->hasRole('Committee Member') || auth()->user()->hasRole('Beneficiary')){
+        }else{ 
+            if($this->church_id == null){
+                Notification::make()
+                ->title('No Registered church')
+                ->body('Please contact your administrator, to register church')
+                ->warning()
+                ->send();
+                return redirect()->to('/admin/register');
+            }else if(auth()->user()->hasRole('Jumuiya Chairperson') || auth()->user()->hasRole('Jumuiya Accountant') || auth()->user()->hasRole('Committee Member') || auth()->user()->hasRole('Beneficiary')){
                 return redirect()->to('admin');
             }else{
                 // return redirect()->to(ChurchMemberResource::geturl('create'));

@@ -67,7 +67,7 @@ class Register extends BaseRegister
                             ->default(fn() => Dinomination::where('name', 'KKKT')->pluck('id')[0]),
 
                             Hidden::make('church_id')
-                            ->default(fn() => Church::all()->first()->pluck('id')[0]),
+                            ->default(fn() => Church::all()->count() > 0 ? Church::all()->first()->pluck('id')[0] : null),
 
                             // Select::make('search_key')
                             //     ->options([
@@ -163,8 +163,11 @@ class Register extends BaseRegister
         $data = $this->form->getState();
 
         if(User::where('phone', $data['phone'])->exists()){
-            return app(RegistrationResponse::class, ['phone' => $data['phone']]);
-        }else{
+            return app(RegistrationResponse::class, ['phone' => $data['phone'], 'church_id' => $data['church_id']]);
+        }else if($data['church_id'] == null){
+            return app(RegistrationResponse::class, ['phone' => $data['phone'], 'church_id' => $data['church_id']]);
+        }
+        else{
             $user = $this->getUserModel()::create($data);
 
             $this->sendEmailVerificationNotification($user);
