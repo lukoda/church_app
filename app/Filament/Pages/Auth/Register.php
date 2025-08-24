@@ -67,7 +67,7 @@ class Register extends BaseRegister
                             ->default(fn() => Dinomination::where('name', 'KKKT')->pluck('id')[0]),
 
                             Hidden::make('church_id')
-                            ->default(fn() => Church::where('name','Azania Front')->pluck('id')[0]),
+                            ->default(fn() => Church::all()->first()->pluck('id')[0]),
 
                             // Select::make('search_key')
                             //     ->options([
