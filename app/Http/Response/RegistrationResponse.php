@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Livewire\Features\SupportRedirects\Redirector;
 use Filament\Notifications\Notification;
 use App\Models\User;
+use App\Models\Church;
 
 class RegistrationResponse implements Responsable
 {
@@ -32,7 +33,7 @@ class RegistrationResponse implements Responsable
             return redirect()->to('/admin/register');
 
         }else{ 
-            if($this->church_id == null){
+            if($this->church_id == null && Church::count() <= 0){
                 Notification::make()
                 ->title('No Registered church')
                 ->body('Please contact your administrator, to register church')

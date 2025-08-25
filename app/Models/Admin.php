@@ -42,7 +42,17 @@ class Admin extends Authenticatable implements FilamentUser,HasName
 
     public function getFilamentName(): string
     {
-        return "Admin";
+        if(auth()->user()->hasRole('Dinomination Admin')){
+            return "Dinomination Admin";
+        }else if(auth()->user()->hasRole('Diocese Admin')){
+            return "Diocese Admin";
+        }else if(auth()->user()->hasRole('ChurchDistrict Admin')){
+            return "ChurchDistrict Admin";
+        }else if(auth()->user()->hasRole('Parish Admin')){
+            return "Parish Admin";
+        }else{
+            return "Admin";
+        }
     }
 
     public function diocese(): BelongsTo
@@ -59,4 +69,5 @@ class Admin extends Authenticatable implements FilamentUser,HasName
     {
         return $this->belongsTo(Church::class);
     }
+
 }

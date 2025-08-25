@@ -27,7 +27,7 @@ class CreateAdmin extends CreateRecord
             }else{
                 Notification::make()
                 ->title('All registered Dioceses Have already been assigned an Admin.')
-                ->body('Can not add more than one admin to one diocese')
+                ->body('Each diocese can have one admin, Please create a new diocese to register new admin.')
                 ->warning()
                 ->send();
                 redirect()->to(static::getResource()::getUrl('index'));
@@ -39,7 +39,7 @@ class CreateAdmin extends CreateRecord
             }else{
                 Notification::make()
                 ->title('All registered Church Districts Have already been assigned an Admin.')
-                ->body('Can not add more than one admin to one Church District')
+                ->body('Each church district can have one admin, Please create a new church district to register new admin.')
                 ->warning()
                 ->send();
                 redirect()->to(static::getResource()::getUrl('index')); 
@@ -51,7 +51,7 @@ class CreateAdmin extends CreateRecord
             }else{
                 Notification::make()
                 ->title('All registered Churches Have already been assigned an Admin.')
-                ->body('Can not add more than one admin to one Church')
+                ->body('Each church can have one admin, Please create a new church to register new admin.')
                 ->warning()
                 ->send();
                 redirect()->to(static::getResource()::getUrl('index')); 
