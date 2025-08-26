@@ -791,8 +791,8 @@ class ChurchMemberResource extends Resource
 
                                 TextInput::make('nida_id')
                                     ->label('ID Number')
-                                    ->helperText('eg. xxxxxxxx-xxxxx-xxxxx-xx')
-                                    ->regex('/(\d{8}-\d{5}-\d{5}-\d{2)/')
+                                    ->placeHolder('eg. xxxxxxxx-xxxxx-xxxxx-xx')
+                                    ->regex('/^\d{8}-\d{5}-\d{5}-\d{2}$/')
                                     ->maxLength(23)
                                     ->required()
                                     ->visible(function(Get $get){

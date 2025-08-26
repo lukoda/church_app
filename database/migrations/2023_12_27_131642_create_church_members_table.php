@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('phone')->unique();
             $table->date('date_of_birth')->nullable();
             $table->date('date_registered')->nullable();
-            $table->string('identification_type');
+            $table->string('identification_type')->nullable();
             $table->string('nida_id')->nullable();
             $table->string('passport_id')->nullable();
             $table->string('driver_id')->nullable();

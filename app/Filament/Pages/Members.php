@@ -185,8 +185,8 @@ class Members extends Page
 
                                     TextInput::make('phone')
                                         ->tel()
-                                        ->helperText('0789******')
-                                        ->maxLength(10)
+                                        ->helperText('This will be member username for login once approved')
+                                        ->maxLength(fn() => auth()->user()->residence_status == 'Resident' ? 10 : 20)
                                         ->required()
                                         ->default(User::whereId(auth()->id())->pluck('phone')[0])
                                         ->disabled(),
@@ -279,7 +279,7 @@ class Members extends Page
                                         }),
 
                                     Checkbox::make('has_dependants')
-                                    ->label('has_dependants?')
+                                    ->label('Has Dependants?')
                                     ->inline(false)
                                     ->live(),
 
@@ -352,6 +352,176 @@ class Members extends Page
 
                                     ]),
 
+                                Step::make('Physical Address')
+                                    ->schema([
+                                    Grid::make(3)
+                                        ->schema([
+                                            TextInput::make('postal_code')
+                                                ->nullable()
+                                                ->hidden(),
+    
+                                            Select::make('region_id')
+                                                ->preload()
+                                                ->reactive()
+                                                ->searchable()
+                                                ->label('Region')
+                                                ->options(Region::pluck('name', 'id')->toArray())
+                                                ->afterStateUpdated(function (Set $set): void {
+                                                    $set('district_id', null);
+                                                    $set('ward_id', null);
+                                                })
+                                                ->required(function(){
+                                                        if(auth()->user()->churchMember){
+                                                            if(auth()->user()->churchMember->personal_details !== Null){
+                                                                return true;
+                                                            }else{
+                                                                return false;
+                                                            }
+                                                        }else{
+                                                            return false;
+                                                        }
+                                                })
+                                                ->visible(function(){
+                                                    if(auth()->user()->residence_status == 'Non Resident'){
+                                                        return false;
+                                                    }else if(auth()->user()->residence_status == 'Resident'){
+                                                        return true;
+                                                    }
+                                                }),
+    
+                                            Select::make('district_id')
+                                                ->preload()
+                                                ->searchable()
+                                                ->label('District')
+                                                ->options(function (Get $get) {
+                                                    if (blank($get('region_id'))) {
+                                                        return [];
+                                                    }
+    
+                                                    $region = Region::whereId($get('region_id'))->first();
+    
+                                                    return $region->districts()->pluck('name', 'id')->toArray();
+                                                })
+                                                ->reactive()
+                                                ->required(function(){
+                                                        if(auth()->user()->churchMember){
+                                                            if(auth()->user()->churchMember->personal_details !== Null){
+                                                                return true;
+                                                            }else{
+                                                                return false;
+                                                            }
+                                                        }else{
+                                                            return false;
+                                                        }
+                                                })
+                                                ->visible(function(){
+                                                    if(auth()->user()->residence_status == 'Non Resident'){
+                                                        return false;
+                                                    }else if(auth()->user()->residence_status == 'Resident'){
+                                                        return true;
+                                                    }
+                                                }),
+    
+                                            Select::make('ward_id')
+                                                ->preload()
+                                                ->searchable()
+                                                ->label('Ward')
+                                                ->options(function (Get $get) {
+                                                    if (blank($get('district_id'))) {
+                                                        return [];
+                                                    }
+    
+                                                    $district = District::whereId($get('district_id'))->first();
+    
+                                                    return $district->wards()->pluck('name', 'id')->toArray();
+                                                })
+                                                ->required(function(){
+                                                        if(auth()->user()->churchMember){
+                                                            if(auth()->user()->churchMember->personal_details !== Null){
+                                                                return true;
+                                                            }else{
+                                                                return false;
+                                                            }
+                                                        }else{
+                                                            return false;
+                                                        }
+                                                })
+                                                ->visible(function(){
+                                                    if(auth()->user()->residence_status == 'Non Resident'){
+                                                        return false;
+                                                    }else if(auth()->user()->residence_status == 'Resident'){
+                                                        return true;
+                                                    }
+                                                }),
+    
+                                                TextInput::make('street')
+                                                    ->nullable()
+                                                    ->visible(function(){
+                                                        if(auth()->user()->residence_status == 'Non Resident'){
+                                                            return false;
+                                                        }else if(auth()->user()->residence_status == 'Resident'){
+                                                            return true;
+                                                        }
+                                                    }),
+    
+                                                TextInput::make('block_no')
+                                                    ->nullable()
+                                                    ->visible(function(){
+                                                        if(auth()->user()->residence_status == 'Non Resident'){
+                                                            return false;
+                                                        }else if(auth()->user()->residence_status == 'Resident'){
+                                                            return true;
+                                                        }
+                                                    }),
+    
+                                                TextInput::make('house_no')
+                                                    ->nullable()
+                                                    ->visible(function(){
+                                                        if(auth()->user()->residence_status == 'Non Resident'){
+                                                            return false;
+                                                        }else if(auth()->user()->residence_status == 'Resident'){
+                                                            return true;
+                                                        }
+                                                    }),
+    
+                                                Select::make('resident_country')
+                                                    ->label('Resident Country')
+                                                    ->options(Country::all()->pluck('name','code'))
+                                                    ->required()
+                                                    ->visible(function(){
+                                                        if(auth()->user()->residence_status == 'Non Resident'){
+                                                            return true;
+                                                        }else if(auth()->user()->residence_status == 'Resident'){
+                                                            return false;
+                                                        }
+                                                    }),
+        
+                                                TextInput::make('resident_city')
+                                                ->label('Resident City')
+                                                ->required()
+                                                ->visible(function(){
+                                                    if(auth()->user()->residence_status == 'Non Resident'){
+                                                        return true;
+                                                    }else if(auth()->user()->residence_status == 'Resident'){
+                                                        return false;
+                                                    }
+                                                }),
+        
+                                                TextInput::make('resident_street')
+                                                ->label('Resident Street')
+                                                ->nullable()
+                                                ->visible(function(){
+                                                    if(auth()->user()->residence_status == 'Non Resident'){
+                                                        return true;
+                                                    }else if(auth()->user()->residence_status == 'Resident'){
+                                                        return false;
+                                                    }
+                                                }),
+    
+                                            ]),
+    
+                                        ]),
+
                             Step::make('ID Details')
                                 ->columns(2)
                                 ->schema([
@@ -364,11 +534,11 @@ class Members extends Page
                                         ->reactive(),
 
                                     TextInput::make('nida_id')
-                                        ->required()
                                         ->label('ID Number')
-                                        ->helperText('eg. xxxxxxxx-xxxxx-xxxxx-xx')
-                                        ->regex('/(\d{8}-\d{5}-\d{5}-\d{2)/')
+                                        ->placeHolder  ('eg. xxxxxxxx-xxxxx-xxxxx-xx')
+                                        ->regex('/^\d{8}-\d{5}-\d{5}-\d{2}$/')
                                         ->maxLength(23)
+                                        ->required()
                                         ->visible(function(Get $get){
                                             if($get('identification_type') == 'nida'){
                                                 return true;
@@ -404,176 +574,6 @@ class Members extends Page
                                         ->downloadable()
                                         ->nullable()
                                         ->columnSpan('full'),
-                                    ]),
-
-                            Step::make('Physical Address')
-                                ->schema([
-                                Grid::make(3)
-                                    ->schema([
-                                        TextInput::make('postal_code')
-                                            ->nullable()
-                                            ->hidden(),
-
-                                        Select::make('region_id')
-                                            ->preload()
-                                            ->reactive()
-                                            ->searchable()
-                                            ->label('Region')
-                                            ->options(Region::pluck('name', 'id')->toArray())
-                                            ->afterStateUpdated(function (Set $set): void {
-                                                $set('district_id', null);
-                                                $set('ward_id', null);
-                                            })
-                                            ->required(function(){
-                                                    if(auth()->user()->churchMember){
-                                                        if(auth()->user()->churchMember->personal_details !== Null){
-                                                            return true;
-                                                        }else{
-                                                            return false;
-                                                        }
-                                                    }else{
-                                                        return false;
-                                                    }
-                                            })
-                                            ->visible(function(){
-                                                if(auth()->user()->residence_status == 'Non Resident'){
-                                                    return false;
-                                                }else if(auth()->user()->residence_status == 'Resident'){
-                                                    return true;
-                                                }
-                                            }),
-
-                                        Select::make('district_id')
-                                            ->preload()
-                                            ->searchable()
-                                            ->label('District')
-                                            ->options(function (Get $get) {
-                                                if (blank($get('region_id'))) {
-                                                    return [];
-                                                }
-
-                                                $region = Region::whereId($get('region_id'))->first();
-
-                                                return $region->districts()->pluck('name', 'id')->toArray();
-                                            })
-                                            ->reactive()
-                                            ->required(function(){
-                                                    if(auth()->user()->churchMember){
-                                                        if(auth()->user()->churchMember->personal_details !== Null){
-                                                            return true;
-                                                        }else{
-                                                            return false;
-                                                        }
-                                                    }else{
-                                                        return false;
-                                                    }
-                                            })
-                                            ->visible(function(){
-                                                if(auth()->user()->residence_status == 'Non Resident'){
-                                                    return false;
-                                                }else if(auth()->user()->residence_status == 'Resident'){
-                                                    return true;
-                                                }
-                                            }),
-
-                                        Select::make('ward_id')
-                                            ->preload()
-                                            ->searchable()
-                                            ->label('Ward')
-                                            ->options(function (Get $get) {
-                                                if (blank($get('district_id'))) {
-                                                    return [];
-                                                }
-
-                                                $district = District::whereId($get('district_id'))->first();
-
-                                                return $district->wards()->pluck('name', 'id')->toArray();
-                                            })
-                                            ->required(function(){
-                                                    if(auth()->user()->churchMember){
-                                                        if(auth()->user()->churchMember->personal_details !== Null){
-                                                            return true;
-                                                        }else{
-                                                            return false;
-                                                        }
-                                                    }else{
-                                                        return false;
-                                                    }
-                                            })
-                                            ->visible(function(){
-                                                if(auth()->user()->residence_status == 'Non Resident'){
-                                                    return false;
-                                                }else if(auth()->user()->residence_status == 'Resident'){
-                                                    return true;
-                                                }
-                                            }),
-
-                                            TextInput::make('street')
-                                                ->nullable()
-                                                ->visible(function(){
-                                                    if(auth()->user()->residence_status == 'Non Resident'){
-                                                        return false;
-                                                    }else if(auth()->user()->residence_status == 'Resident'){
-                                                        return true;
-                                                    }
-                                                }),
-
-                                            TextInput::make('block_no')
-                                                ->nullable()
-                                                ->visible(function(){
-                                                    if(auth()->user()->residence_status == 'Non Resident'){
-                                                        return false;
-                                                    }else if(auth()->user()->residence_status == 'Resident'){
-                                                        return true;
-                                                    }
-                                                }),
-
-                                            TextInput::make('house_no')
-                                                ->nullable()
-                                                ->visible(function(){
-                                                    if(auth()->user()->residence_status == 'Non Resident'){
-                                                        return false;
-                                                    }else if(auth()->user()->residence_status == 'Resident'){
-                                                        return true;
-                                                    }
-                                                }),
-
-                                            Select::make('resident_country')
-                                                ->label('Resident Country')
-                                                ->options(Country::all()->pluck('name','code'))
-                                                ->required()
-                                                ->visible(function(){
-                                                    if(auth()->user()->residence_status == 'Non Resident'){
-                                                        return true;
-                                                    }else if(auth()->user()->residence_status == 'Resident'){
-                                                        return false;
-                                                    }
-                                                }),
-    
-                                            TextInput::make('resident_city')
-                                            ->label('Resident City')
-                                            ->required()
-                                            ->visible(function(){
-                                                if(auth()->user()->residence_status == 'Non Resident'){
-                                                    return true;
-                                                }else if(auth()->user()->residence_status == 'Resident'){
-                                                    return false;
-                                                }
-                                            }),
-    
-                                            TextInput::make('resident_street')
-                                            ->label('Resident Street')
-                                            ->nullable()
-                                            ->visible(function(){
-                                                if(auth()->user()->residence_status == 'Non Resident'){
-                                                    return true;
-                                                }else if(auth()->user()->residence_status == 'Resident'){
-                                                    return false;
-                                                }
-                                            }),
-
-                                        ]),
-
                                     ]),
 
                             Step::make('Other Information')
@@ -737,7 +737,7 @@ class Members extends Page
                         ]),
 
 
-                            Step::make('Card Pledge Information')
+                            Step::make('Annual Pledges')
                                 ->schema([
 
                                     Checkbox::make('is_NewMember')

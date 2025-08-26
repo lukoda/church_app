@@ -261,7 +261,7 @@ class CreateNewChurchMember extends Page
                                     }),
 
                                 Checkbox::make('has_dependants')
-                                ->label('has_dependants?')
+                                ->label('Has Dependants?')
                                 ->inline(false)
                                 ->live(),
 
@@ -595,15 +595,15 @@ class CreateNewChurchMember extends Page
                                             }),
 
                                         TextInput::make('resident_city')
-                                        ->label('Resident City')
-                                        ->required()
-                                        ->visible(function(){
-                                            if(auth()->user()->residence_status == 'Non Resident'){
-                                                return true;
-                                            }else if(auth()->user()->residence_status == 'Resident'){
-                                                return false;
-                                            }
-                                        }),
+                                            ->label('Resident City')
+                                            ->required()
+                                            ->visible(function(){
+                                                if(auth()->user()->residence_status == 'Non Resident'){
+                                                    return true;
+                                                }else if(auth()->user()->residence_status == 'Resident'){
+                                                    return false;
+                                                }
+                                            }),
 
                                         TextInput::make('resident_street')
                                         ->label('Resident Street')
@@ -624,25 +624,6 @@ class CreateNewChurchMember extends Page
                                     if(ChurchMember::where('user_id', auth()->user()->id)->count() > 0){
                                         $church_member = ChurchMember::where('user_id', auth()->user()->id)->first();
                                         $church_member->update([
-                                            // 'first_name' => $get('first_name'),
-                                            // 'middle_name' => $get('middle_name'),
-                                            // 'surname' => $get('surname'),
-                                            // 'email' => $get('email') ?? Null,
-                                            // 'phone' => $get('phone'),
-                                            // 'gender' => $get('gender'),
-                                            // 'marital_status' => $get('marital_status'),
-                                            // 'date_of_birth' => $get('date_of_birth'),
-                                            // 'citizenship' => $get('citizenship'),
-                                            // 'spouse_first_name' => $get('spouse_first_name') ?? Null,
-                                            // 'spouse_middle_name' => $get('spouse_middle_name') ?? Null,
-                                            // 'spouse_surname' => $get('spouse_surname') ?? Null,
-                                            // 'spouse_citizenship' => $get('spouse_citizenship') ?? Null,
-                                            // 'spouse_residence_status' => $get('spouse_residence_status') ?? Null,
-                                            // 'spouse_contact_no' => $get('spouse_contact_no') ?? Null,
-                                            // 'personal_details' => is_null($get('first_name')) ? Null : 'complete',
-                                            // 'nida_id' => $get('nida_id') ?? Null,
-                                            // 'passport_id' => $get('passport_id') ?? Null,
-                                            // 'picture' => $get('picture') ?? Null,
                                             'postal_code' => $get('postal_code') ?? Null,
                                             'region_id' => $get('region_id') ?? Null,
                                             'district_id' => $get('district_id') ?? Null,
@@ -658,41 +639,6 @@ class CreateNewChurchMember extends Page
                                             'church_id' => auth()->user()->church_id
                                         ]);
                                     }
-                                    // else{
-                                    //     $church_member = new ChurchMember;
-                                    //     $church_member->first_name = $get('first_name');
-                                    //     $church_member->middle_name = $get('middle_name');
-                                    //     $church_member->surname = $get('surname');
-                                    //     $church_member->email = $get('email') ?? Null;
-                                    //     $church_member->phone = $get('phone');
-                                    //     $church_member->gender = $get('gender');
-                                    //     $church_member->marital_status = $get('marital_status');
-                                    //     $church_member->citizenship = $get('citizenship');
-                                    //     $church_member->spouse_first_name = $get('spouse_first_name') ?? Null;
-                                    //     $church_member->spouse_middle_name = $get('spouse_middle_name') ?? Null;
-                                    //     $church_member->spouse_surname = $get('spouse_surname') ?? Null;
-                                    //     $church_member->spouse_residence_status = $get('spouse_residence_status') ?? Null;
-                                    //     $church_member->spouse_contact_no = $get('spouse_contact_no') ?? Null;
-                                    //     $church_member->date_of_birth = $get('date_of_birth') ?? Null;
-                                    //     $church_member->personal_details = is_null($get('first_name')) ? Null : 'complete';
-                                    //     $church_member->nida_id = $get('nida_id') ?? Null;
-                                    //     $church_member->passport_id = $get('passport_id') ?? Null;
-                                    //     $church_member->picture = $get('picture') ?? Null;
-                                    //     $church_member->postal_code = $get('postal_code') ?? Null;
-                                    //     $church_member->region_id = $get('region_id') ?? Null;
-                                    //     $church_member->district_id = $get('district_id') ?? Null;
-                                    //     $church_member->ward_id = $get('ward_id') ?? Null;
-                                    //     $church_member->street = $get('street') ?? Null;
-                                    //     $church_member->block_no = $get('block_no') ?? Null;
-                                    //     $church_member->house_no = $get('house_no') ?? Null;
-                                    //     $church_member->resident_country = $get('resident_country') ?? Null;
-                                    //     $church_member->resident_city = $get('resident_city') ?? Null;
-                                    //     $church_member->resident_street = $get('resident_street') ?? Null;
-                                    //     $church_member->address_details = (is_null($get('region_id')) && auth()->user()->residence_status == 'Resident') ? Null : ((is_null($get('resident_country')) && auth()->user()->residence_status == 'Non Resident') ? Null : 'complete');
-                                    //     $church_member->user_id = auth()->user()->id;
-                                    //     $church_member->church_id = auth()->user()->church_id;
-                                    //     $church_member->save();
-                                    // }
                                 }),
 
                                 Step::make('ID Details')
@@ -711,7 +657,7 @@ class CreateNewChurchMember extends Page
                                     TextInput::make('nida_id')
                                         ->label('ID Number')
                                         ->placeHolder  ('eg. xxxxxxxx-xxxxx-xxxxx-xx')
-                                        ->regex('/(\d{8}-\d{5}-\d{5}-\d{2})/')
+                                        ->regex('/^\d{8}-\d{5}-\d{5}-\d{2}$/')
                                         ->maxLength(23)
                                         ->required()
                                         ->visible(function(Get $get){
@@ -755,23 +701,7 @@ class CreateNewChurchMember extends Page
                                         if(ChurchMember::where('user_id', auth()->user()->id)->count() > 0){
                                             $church_member = ChurchMember::where('user_id', auth()->user()->id)->first();
                                             $church_member->update([
-                                                // 'first_name' => $get('first_name'),
-                                                // 'middle_name' => $get('middle_name'),
-                                                // 'surname' => $get('surname'),
-                                                // 'email' => $get('email') ?? Null,
-                                                // 'phone' => $get('phone'),
-                                                // 'gender' => $get('gender'),
-                                                // 'marital_status' => $get('marital_status'),
-                                                // 'date_of_birth' => $get('date_of_birth'),
-                                                // 'personal_details' => is_null($get('first_name')) ? Null : 'complete',
-                                                // 'citizenship' => $get('citizenship'),
-                                                // 'spouse_first_name' => $get('spouse_first_name') ?? Null,
-                                                // 'spouse_middle_name' => $get('spouse_middle_name') ?? Null,
-                                                // 'spouse_surname' => $get('spouse_surname') ?? Null,
-                                                // 'spouse_citizenship' => $get('spouse_citizenship') ?? Null,
-                                                // 'spouse_residence_status' => $get('spouse_residence_status') ?? Null,
-                                                // 'spouse_contact_no' => $get('spouse_contact_no') ?? Null,
-                                                'identification_type' => $get('identification_type'),
+                                                'identification_type' => $get('identification_type') ?? Null,
                                                 'nida_id' =>  $get('nida_id') ?? Null,
                                                 'passport_id' => $get('passport_id') ?? Null,
                                                 'driver_id' => $get('driver_id') ?? Null,
@@ -781,31 +711,6 @@ class CreateNewChurchMember extends Page
                                                 'church_id' => auth()->user()->church_id
                                             ]);
                                         }
-                                        // else{
-                                        //     $church_member = new ChurchMember;
-                                        //     $church_member->first_name = $get('first_name');
-                                        //     $church_member->middle_name = $get('middle_name');
-                                        //     $church_member->surname = $get('surname');
-                                        //     $church_member->email = $get('email') ?? Null;
-                                        //     $church_member->phone = $get('phone');
-                                        //     $church_member->gender = $get('gender');
-                                        //     $church_member->marital_status = $get('marital_status');
-                                        //     $church_member->date_of_birth = $get('date_of_birth');
-                                        //     $church_member->citizenship = $get('citizenship');
-                                        //     $church_member->spouse_first_name = $get('spouse_first_name') ?? Null;
-                                        //     $church_member->spouse_middle_name = $get('spouse_middle_name') ?? Null;
-                                        //     $church_member->spouse_surname = $get('spouse_surname') ?? Null;
-                                        //     $church_member->spouse_residence_status = $this->form->getState()['spouse_residence_status'];
-                                        //     $church_member->spouse_contact_no = $this->form->getState()['spouse_contact_no'];
-                                        //     $church_member->personal_details = is_null($this->form->getState()['first_name']) ? Null : 'complete';
-                                        //     $church_member->nida_id = $get('nida_id') ?? Null;
-                                        //     $church_member->passport_id = $get('passport_id') ?? Null;
-                                        //     $church_member->picture = $get('picture') ?? Null;
-                                        //     $church_member->id_image = $get('id_image') ?? Null;
-                                        //     $church_member->user_id = auth()->user()->id;
-                                        //     $church_member->church_id = auth()->user()->church_id;
-                                        //     $church_member->save();
-                                        // }
                                     }),
 
 
