@@ -158,6 +158,7 @@ class CreateChurchSecretary extends CreateRecord
                 $user->password = Hash::make($data['phone']);
                 $user->church_id = $data['church_assigned_id'];
                 $user->dinomination_id = auth()->user()->dinomination_id;
+                $user->residence_status = $data['residence_status'];
                 $user->save();
     
                 $church_member = new ChurchMember;

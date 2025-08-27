@@ -77,6 +77,14 @@ class ChurchSecretaryResource extends Resource
                             ->maxLength(10)
                             ->required(),
 
+                        Select::make('residence_status')
+                            ->label('Residential Status')
+                            ->live()
+                            ->options([
+                                'Resident' => 'Resident',
+                                'Non Resident' => 'Non Resident'
+                            ])
+                            ->required(),
                         // Select::make('church_level')
                         // ->reactive()
                         // ->options([

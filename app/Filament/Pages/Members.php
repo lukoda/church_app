@@ -213,12 +213,12 @@ class Members extends Page
                                         ]),
 
                                     Select::make('citizenship')
+                                        ->searchable()
                                         ->options(Country::all()->pluck('name','code'))
-                                        ->required()                                   
-                                        ->visible(fn () => auth()->user()->residence_status == 'Resident' ? false : true ),
+                                        ->required(),
     
                                     FileUpload::make('picture')
-                                        ->label('ID Image')
+                                        ->label('Passport Size')
                                         ->downloadable()
                                         ->nullable()
                                         ->columnSpan('full'),
@@ -242,6 +242,7 @@ class Members extends Page
                                             ->required(),
     
                                             Select::make('spouse_citizenship')
+                                            ->searchable()
                                             ->options(Country::all()->pluck('name','code'))
                                             ->required(),
     
@@ -256,7 +257,7 @@ class Members extends Page
     
                                             TextInput::make('spouse_contact_no')
                                                 ->tel()
-                                                ->maxLength(fn() => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
+                                                ->maxLength(fn(Get $get) => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
                                                 ->helperText(function(Get $get){
                                                     if($get('spouse_residence_status') == 'Resident'){
                                                         return '0789******';
@@ -266,7 +267,7 @@ class Members extends Page
                                                         return '';
                                                     }
                                                 })
-                                                ->maxLength(fn() => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
+                                                ->maxLength(fn(Get $get) => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
                                                 ->required(),
                                         ])
                                         ->columns(2)
@@ -526,11 +527,17 @@ class Members extends Page
                                 ->columns(2)
                                 ->schema([
                                     Select::make('identification_type')
-                                        ->options([
-                                            'nida' => 'NIDA',
-                                            'passport' => 'Passport',
-                                            'driving_license' => 'Driving License'
-                                        ])
+                                        ->options(function () {
+                                            if(auth()->user()->residence_status == 'Non Resident'){
+                                                return ['passport' => 'Passport'];
+                                            }else{
+                                               return  [
+                                                    'nida' => 'NIDA',
+                                                    'passport' => 'Passport',
+                                                    'driving_license' => 'Driving License'
+                                               ];
+                                            }
+                                        })
                                         ->reactive(),
 
                                     TextInput::make('nida_id')
@@ -580,7 +587,7 @@ class Members extends Page
                                 ->columns(2)
                                 ->columnSpanFull()
                                 ->schema([
-                                    Section::make('Details of Church Communities')
+                                    Section::make('Church Communities')
                                         ->schema([
                                             Select::make('jumuiya_id')
                                                 ->label('Communities')
@@ -611,9 +618,13 @@ class Members extends Page
                                                 ->disabled()
                                         ])
                                         ->hidden(function(){
-                                            if(auth()->user()->residence_status == 'Non Resident'){
+                                            if(Jumuiya::all()->count() <= 0){
                                                 return true;
-                                            }else if(auth()->user()->residence_status == 'Resident'){
+                                            }else if($get('residence_status') == 'Non Resident'){
+                                                return true;
+                                            }else if($get('residence_status') == 'Resident'){
+                                                return false;
+                                            }else{
                                                 return false;
                                             }
                                         }),
@@ -702,6 +713,7 @@ class Members extends Page
                                                     'yes' => 'Yes',
                                                     'no' => 'No'
                                                 ])
+                                                ->required()
                                                 ->visible(function(){
                                                     if(auth()->user()->residence_status == 'Non Resident'){
                                                         return false;
@@ -717,12 +729,15 @@ class Members extends Page
                                                     ->columns(4)
                                                     ->schema([
                                                         TextInput::make('education_level')
+                                                            ->placeHolder('eg. Bachelor Degree')
                                                             ->nullable(),
 
                                                         TextInput::make('profession')
+                                                            ->placeHolder('eg. Digital Marketing Engineer')
                                                             ->nullable(),
 
                                                         TextInput::make('skills')
+                                                            ->placeHolder('eg. Content Creation')
                                                             ->nullable()
                                                             ->helperText('If multiple separate by comma\'s(,)'),
 
@@ -759,7 +774,7 @@ class Members extends Page
                                     TextInput::make('card_no')
                                             ->required(function(){
                                                 if(auth()->user()->churchMember){
-                                                    if(auth()->user()->churchMember->spiritual_information !== Null){
+                                                    if(auth()->user()->churchMember->spiritual_information !== Null&& auth()->user()->churchMember->address_details != Null){
                                                         return true;
                                                     }else{
                                                         return false;
@@ -831,7 +846,7 @@ class Members extends Page
                 ->slideOver()
                 ->modalWidth(MaxWidth::SixExtraLarge)
                 ->after(function (ChurchMember $record, array $data) {
-                    if($record->first_name !== Null && $record->region_id !== Null && $record->received_confirmation !== Null){
+                    if($record->first_name !== Null && ($record->region_id !== Null || $record->resident_country !== NUll) && ($record->received_confirmation !== Null || $record->received_baptism != Null || $record->sacrament_participation != Null)){
                         $record->update([
                             'personal_details' => 'complete',
                             'address_details' => 'complete',
@@ -848,7 +863,7 @@ class Members extends Page
                                     'address_details' => 'complete'
                                 ]);
                             }else{
-                                if($data['received_confirmation'] !== Null){
+                                if($data['received_confirmation'] !== Null || $data['received_baptism'] !== Null || $data['sacrament_participation'] !== Null){
                                     $record->update([
                                         'spiritual_information' => 'complete'
                                     ]);
@@ -881,9 +896,14 @@ class Members extends Page
                                             ->placeholder('No e-mail provided'),
                                         TextEntry::make('gender'),
                                         TextEntry::make('phone'),
+                                        TextEntry::make('citizenship'),
                                         TextEntry::make('marital_status'),
                                         TextEntry::make('date_of_birth')
-                                            ->date(),                                       
+                                            ->date(), 
+                                        ImageEntry::make('picture')
+                                            ->label('Passport Size')
+                                            ->height(50)
+                                            ->circular(),                                      
                                     ]),
 
                                 ViewSection::make('Marital Status Info')
@@ -907,6 +927,8 @@ class Members extends Page
                                                 TextEntry::make('date_of_birth')
                                                     ->date(),
                                                 TextEntry::make('gender'),
+                                                TextEntry::make('residence_status')
+                                                ->state(fn() => auth()->user()->residence_status),
                                                 TextEntry::make('relationship')
                                             ])
                                     ])
@@ -921,8 +943,10 @@ class Members extends Page
                                             ->state(function(Model $record){
                                                 if($record->nida_id != Null){
                                                     return 'nida';
-                                                }else{
+                                                }else if($record->passport_id != Null){
                                                     return 'passport';
+                                                }else if($record->driver_id != Null){
+                                                    return 'drving licence';
                                                 }
                                             }),
                                         TextEntry::make('nida_id')
@@ -935,14 +959,22 @@ class Members extends Page
                                             }),
                                         TextEntry::make('passport_id')
                                             ->visible(function($record){
-                                                if($record->passport != Null){
+                                                if($record->passport_id != Null){
                                                     return true;
                                                 }else{
                                                     return false;
                                                 }
                                             }),
-                                        ImageEntry::make('picture')
-                                            ->label('Member Picture')
+                                        TextEntry::make('driver_id')
+                                            ->visible(function($record){
+                                                if($record->driver_id != Null){
+                                                    return true;
+                                                }else{
+                                                    return false;
+                                                }
+                                            }),
+                                        ImageEntry::make('id_image')
+                                            ->label('ID Image')
                                             ->height(50)
                                             ->circular(),
                                         ])
@@ -972,7 +1004,18 @@ class Members extends Page
                                         TextEntry::make('block_no')
                                             ->placeholder('No Block No provided'),                                       
                                         TextEntry::make('house_no')
-                                            ->placeholder('No House No provided')
+                                            ->placeholder('No House No provided'),
+                                        TextEntry::make('resident_country')
+                                            ->state(function(Model $record){
+                                                return Country::where('code', $record->resident_country)->pluck('name');
+                                            })
+                                            ->hidden(fn() => auth()->user()->residence_status == 'Non Resident' ? false : true),
+                                        TextEntry::make('resident_city')
+                                            ->placeholder('No Resident City provided')
+                                            ->hidden(fn() => auth()->user()->residence_status == 'Non Resident' ? false : true),
+                                        TextEntry::make('resident_street')
+                                            ->placeholder('No Resident Street provided')
+                                            ->hidden(fn() => auth()->user()->residence_status == 'Non Resident' ? false : true),
                                     ])
                                     ->description('Address Details')
                                     ->columns(3)

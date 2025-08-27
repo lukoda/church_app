@@ -66,6 +66,7 @@ class EditChurchSecretary extends EditRecord
         $data['church_district'] = $church_district->id;    
         $data['church_assigned_id'] = $church_member->church_id;
         $data['church_level'] = $data['title'];
+        $data['residence_status'] = $user->residence_status;
 
         // if($user->hasRole('Dinomination Admin')){
         //     $data['church_level'] = $data['title'];

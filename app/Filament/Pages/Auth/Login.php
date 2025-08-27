@@ -29,7 +29,7 @@ class Login extends BaseLogin
             ->validationMessages([
                 'unique' => 'The :attribute has already been registered.',
             ])
-            ->maxLength(10)
+            ->maxLength(20)
             ->tel()
             ->required()
             ->autocomplete()

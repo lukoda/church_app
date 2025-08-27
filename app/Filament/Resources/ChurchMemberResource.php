@@ -78,7 +78,7 @@ class ChurchMemberResource extends Resource
                                             ->placeholder('No e-mail provided'),
                                         TextEntry::make('gender'),
                                         TextEntry::make('phone'),
-                                        TextEntry::make('citizenship')->hidden(fn() => auth()->user()->residence_status == 'Non Resident' ? true : false),
+                                        TextEntry::make('citizenship'),
                                         TextEntry::make('marital_status'),
                                         TextEntry::make('date_of_birth')
                                             ->date(),     
@@ -421,20 +421,12 @@ class ChurchMemberResource extends Resource
 
 
                                 Select::make('citizenship')
+                                    ->searchable()
                                     ->options(Country::all()->pluck('name','code'))
-                                    ->required()
-                                    ->visible(function(Get $get){
-                                        if($get('residence_status') == 'Resident'){
-                                            return false;
-                                        }else if($get('residence_status') == 'Non Resident'){
-                                            return true;
-                                        }else{
-                                            return false;
-                                        }
-                                    }),
+                                    ->required(),
 
                                 FileUpload::make('picture')
-                                    ->label('Member Image')
+                                    ->label('Passport Size')
                                     ->downloadable()
                                     ->nullable()
                                     ->columnSpan('full'),
@@ -477,6 +469,7 @@ class ChurchMemberResource extends Resource
                                         ->required(),
 
                                         Select::make('spouse_citizenship')
+                                        ->searchable()
                                         ->options(Country::all()->pluck('name','code'))
                                         ->required(),
 
@@ -492,7 +485,7 @@ class ChurchMemberResource extends Resource
 
                                         TextInput::make('spouse_contact_no')
                                             ->tel()
-                                            ->maxLength(fn() => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
+                                            ->maxLength(fn(Get $get) => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
                                             ->helperText(function(Get $get){
                                                 if($get('spouse_residence_status') == 'Resident'){
                                                     return '0789******';
@@ -516,7 +509,7 @@ class ChurchMemberResource extends Resource
                                     }),
 
                                 Checkbox::make('has_dependants')
-                                ->label('has_dependants?')
+                                ->label('Has Dependants?')
                                 ->inline(false)
                                 ->live(),
 
@@ -782,11 +775,17 @@ class ChurchMemberResource extends Resource
                             ->schema([
                                 Select::make('identification_type')
                                     ->label('ID Type')
-                                    ->options([
-                                        'nida' => 'NIDA',
-                                        'passport' => 'Passport',
-                                        'driving_license' => 'Driving License'
-                                    ])
+                                    ->options(function (Get $get) {
+                                        if($get('residence_status') == 'Non Resident'){
+                                            return ['passport' => 'Passport'];
+                                        }else{
+                                           return  [
+                                                'nida' => 'NIDA',
+                                                'passport' => 'Passport',
+                                                'driving_license' => 'Driving License'
+                                           ];
+                                        }
+                                    })
                                     ->reactive(),
 
                                 TextInput::make('nida_id')
@@ -837,7 +836,7 @@ class ChurchMemberResource extends Resource
                             ->columns(2)
                             ->columnSpanFull()
                             ->schema([
-                                Section::make('Details of Church Communities')
+                                Section::make('Church Communities')
                                     ->schema([
                                         Select::make('jumuiya_id')
                                             ->label('Communities')
@@ -868,7 +867,9 @@ class ChurchMemberResource extends Resource
                                             ->disabled()
                                     ])
                                     ->hidden(function(Get $get){
-                                        if($get('residence_status') == 'Non Resident'){
+                                        if(Jumuiya::all()->count() <= 0){
+                                            return true;
+                                        }else if($get('residence_status') == 'Non Resident'){
                                             return true;
                                         }else if($get('residence_status') == 'Resident'){
                                             return false;
@@ -966,6 +967,7 @@ class ChurchMemberResource extends Resource
                                             }),
 
                                         Select::make('sacrament_participation')
+                                            ->required()
                                             ->options([
                                                 'yes' => 'Yes',
                                                 'no' => 'No'
@@ -987,12 +989,15 @@ class ChurchMemberResource extends Resource
                                                 ->columns(4)
                                                 ->schema([
                                                     TextInput::make('education_level')
+                                                        ->placeHolder('eg. Bachelor Degree')
                                                         ->nullable(),
 
                                                     TextInput::make('profession')
+                                                        ->placeHolder('eg. Digital Marketing Engineer')
                                                         ->nullable(),
 
                                                     TextInput::make('skills')
+                                                        ->placeHolder('eg. Content Creation')
                                                         ->nullable()
                                                         ->helperText('If multiple separate by comma\'s(,)'),
 

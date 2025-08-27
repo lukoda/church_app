@@ -51,12 +51,28 @@ class MemberCardPledges extends Page implements HasTable
     {
         if(static::canAccess()){
             if(ChurchMember::where('id', Auth::guard('web')->user()->churchMember->id)->whereNull('card_no')->exists()){
-                Notification::make()
-                ->title('Please Complete Registration')
-                ->body('You have not yet registered your card number, please click edit on member details page and complete registration to proceed')
-                ->danger()
-                ->send();
-                redirect()->to('/admin/members');
+                if(! Card::where('card_status', 'active')->exists()){
+                    Notification::make()
+                    ->title('No cards registered yet')
+                    ->body('Contact your church secretary to register church cards')
+                    ->danger()
+                    ->send();
+                    redirect()->to('/admin/members');
+                }else if(ChurchMember::where('id', Auth::guard('web')->user()->churchMember->id)->where('status', 'inactive')->exists()){
+                    Notification::make()
+                    ->title('Pending approval member registration')
+                    ->body('Contact your church secretary to approve your registration request, before adding pledges')
+                    ->danger()
+                    ->send();
+                    redirect()->to('/admin/members');
+                }else{
+                    Notification::make()
+                    ->title('Please Complete Registration')
+                    ->body('You have not yet registered your card number, please click edit on member details page and complete registration to proceed')
+                    ->danger()
+                    ->send();
+                    redirect()->to('/admin/members');
+                }
             }else{
                 abort_unless(static::canAccess(), 403);
             }

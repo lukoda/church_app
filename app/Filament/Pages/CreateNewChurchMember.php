@@ -196,12 +196,12 @@ class CreateNewChurchMember extends Page
                                     ]),
 
                                 Select::make('citizenship')
+                                    ->searchable()
                                     ->options(Country::all()->pluck('name','code'))
-                                    ->required()                                   
-                                    ->visible(fn () => auth()->user()->residence_status == 'Resident' ? false : true ),
+                                    ->required(),
 
                                 FileUpload::make('picture')
-                                    ->label('ID Image')
+                                    ->label('Passport Size')
                                     ->downloadable()
                                     ->nullable()
                                     ->columnSpan('full'),
@@ -224,6 +224,7 @@ class CreateNewChurchMember extends Page
                                         ->required(),
 
                                         Select::make('spouse_citizenship')
+                                        ->searchable()
                                         ->options(Country::all()->pluck('name','code'))
                                         ->required(),
 
@@ -238,7 +239,7 @@ class CreateNewChurchMember extends Page
 
                                         TextInput::make('spouse_contact_no')
                                             ->tel()
-                                            ->maxLength(fn() => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
+                                            ->maxLength(fn(Get $get) => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
                                             ->helperText(function(Get $get){
                                                 if($get('spouse_residence_status') == 'Resident'){
                                                     return '0789******';
@@ -248,8 +249,10 @@ class CreateNewChurchMember extends Page
                                                     return '';
                                                 }
                                             })
-                                            ->maxLength(fn() => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
+                                            ->maxLength(fn(Get $get) => $get('spouse_residence_status') == 'Resident' ? 10 : 20)
                                             ->required(),
+
+                                        
                                     ])
                                     ->columns(2)
                                     ->visible(function(Get $get){
@@ -584,6 +587,7 @@ class CreateNewChurchMember extends Page
                                         
                                         Select::make('resident_country')
                                             ->label('Resident Country')
+                                            ->searchable()
                                             ->options(Country::all()->pluck('name','code'))
                                             ->required()
                                             ->visible(function(){
@@ -647,11 +651,17 @@ class CreateNewChurchMember extends Page
                                     Select::make('identification_type')
                                         ->label('ID Type')
                                         ->required()
-                                        ->options([
-                                            'nida' => 'NIDA',
-                                            'passport' => 'Passport',
-                                            'driving_license' => 'Driving License'
-                                        ])
+                                        ->options(function () {
+                                            if(auth()->user()->residence_status == 'Non Resident'){
+                                                return ['passport' => 'Passport'];
+                                            }else{
+                                               return  [
+                                                    'nida' => 'NIDA',
+                                                    'passport' => 'Passport',
+                                                    'driving_license' => 'Driving License'
+                                               ];
+                                            }
+                                        })
                                         ->reactive(),
     
                                     TextInput::make('nida_id')
@@ -718,7 +728,7 @@ class CreateNewChurchMember extends Page
                             ->columns(2)
                             ->columnSpanFull()
                             ->schema([
-                                Section::make('Details of Church Communities')
+                                Section::make('Church Communities')
                                     ->schema([
                                         Select::make('jumuiya_id')
                                             ->label('Communities')
@@ -749,9 +759,13 @@ class CreateNewChurchMember extends Page
                                             ->disabled()
                                     ])
                                     ->hidden(function(){
-                                        if(auth()->user()->residence_status == 'Non Resident'){
+                                        if(Jumuiya::all()->count() <= 0){
                                             return true;
-                                        }else if(auth()->user()->residence_status == 'Resident'){
+                                        }else if($get('residence_status') == 'Non Resident'){
+                                            return true;
+                                        }else if($get('residence_status') == 'Resident'){
+                                            return false;
+                                        }else{
                                             return false;
                                         }
                                     }),
@@ -843,6 +857,7 @@ class CreateNewChurchMember extends Page
                                             }),
 
                                         Select::make('sacrament_participation')
+                                            ->required()
                                             ->options([
                                                 'yes' => 'Yes',
                                                 'no' => 'No'
@@ -862,12 +877,15 @@ class CreateNewChurchMember extends Page
                                                 ->columns(4)
                                                 ->schema([
                                                     TextInput::make('education_level')
+                                                        ->placeHolder('eg. Bachelor Degree')
                                                         ->nullable(),
 
                                                     TextInput::make('profession')
+                                                        ->placeHolder('eg. Digital Marketing Engineer')
                                                         ->nullable(),
 
                                                     TextInput::make('skills')
+                                                        ->placeHolder('eg. Content Creation')
                                                         ->nullable()
                                                         ->helperText('If multiple separate by comma\'s(,)'),
 
@@ -1221,12 +1239,19 @@ class CreateNewChurchMember extends Page
                 'email' => $this->form->getState()['email'] ?? Null,
                 'phone' => $this->form->getState()['phone'],
                 'gender' => $this->form->getState()['gender'],
+                'citizenship' => $this->form->getState()['citizenship'],
                 'marital_status' => $this->form->getState()['marital_status'],
                 'date_of_birth' => $this->form->getState()['date_of_birth'],
+                'spouse_first_name' => $this->form->getState()['spouse_first_name'] ?? Null,
+                'spouse_middle_name' => $this->form->getState()['spouse_middle_name'] ?? Null,
+                'spouse_surname' => $this->form->getState()['spouse_surname'] ?? Null,
+                'spouse_citizenship' => $this->form->getState()['spouse_citizenship'] ?? Null,
+                'spouse_residence_status' => $this->form->getState()['spouse_residence_status'] ?? Null,
+                'picture' => $this->form->getState()['picture'] ?? Null,
                 'personal_details' => is_null($this->form->getState()['first_name']) ? Null : 'complete',
                 'nida_id' => $this->form->getState()['nida_id'] ?? Null,
                 'passport_id' => $this->form->getState()['passport_id'] ?? Null,
-                'picture' => $this->form->getState()['picture'] ?? Null,
+                'driver_id' => $this->form->getState()['driver_id'] ?? Null,
                 'postal_code' => $this->form->getState()['postal_code'] ?? Null,
                 'region_id' => $this->form->getState()['region_id'] ?? Null,
                 'district_id' => $this->form->getState()['district_id'] ?? Null,
@@ -1234,7 +1259,11 @@ class CreateNewChurchMember extends Page
                 'street' => $this->form->getState()['street'] ?? Null,
                 'block_no' => $this->form->getState()['block_no'] ?? Null,
                 'house_no' => $this->form->getState()['house_no'] ?? Null,
-                'address_details' => is_null($this->form->getState()['region_id']) ? Null : 'complete',
+                'id_image' => $this->form->getState()['id_image'] ?? Null,
+                'resident_country' => $this->form->getState()['resident_country'] ?? Null,
+                'resident_city' => $this->form->getState()['resident_city'] ?? Null,
+                'resident_street' => $this->form->getState()['resident_street'] ?? Null,
+                'address_details' => auth()->user()->residence_status == 'Resident' ? (is_null($this->form->getState()['region_id']) ? Null : 'complete') : (is_null($this->form->getState()['resident_country']) ? Null : 'complete'),
                 'jumuiya_id' => $this->form->getState()['jumuiya_id'] ?? Null,
                 'received_confirmation' => $this->form->getState()['received_confirmation'] ?? Null,
                 'confirmation_place' => $this->form->getState()['confirmation_place'] ?? Null,
@@ -1285,11 +1314,18 @@ class CreateNewChurchMember extends Page
             $church_member->email = $this->form->getState()['email'] ?? Null;
             $church_member->phone = $this->form->getState()['phone'];
             $church_member->gender = $this->form->getState()['gender'];
+            $church_member->citizenship = $this->form->getState()['citizenship'];
             $church_member->marital_status = $this->form->getState()['marital_status'];
             $church_member->date_of_birth = $this->form->getState()['date_of_birth'];
             $church_member->nida_id = $this->form->getState()['nida_id'] ?? Null;
             $church_member->passport_id = $this->form->getState()['passport_id'] ?? Null;
+            $church_member->driver_id = $this->form->getState()['driver_id'] ?? Null;
             $church_member->picture = $this->form->getState()['picture'] ?? Null;
+            $church_member->spouse_first_name = $this->form->getState()['spouse_first_name'] ?? Null;
+            $church_member->spouse_middle_name = $this->form->getState()['spouse_middle_name'] ?? Null;
+            $church_member->spouse_surname = $this->form->getState()['spouse_surname'] ?? Null;
+            $church_member->spouse_citizenship = $this->form->getState()['spouse_citizenship'] ?? Null;
+            $church_member->spouse_residence_status = $this->form->getState()['spouse_residence_status'] ?? Null;
             $church_member->personal_details = is_null($this->form->getState()['first_name']) ? Null : 'complete';
             $church_member->postal_code = $this->form->getState()['postal_code'] ?? Null;
             $church_member->region_id = $this->form->getState()['region_id'] ?? Null;
@@ -1298,7 +1334,11 @@ class CreateNewChurchMember extends Page
             $church_member->street = $this->form->getState()['street'] ?? Null;
             $church_member->block_no = $this->form->getState()['block_no'] ?? Null;
             $church_member->house_no = $this->form->getState()['house_no'] ?? Null;
-            $church_member->address_details = is_null($this->form->getState()['region_id']) ? Null : 'complete';
+            $church_member->resident_country = $this->form->getState()['resident_country'] ?? Null;
+            $church_member->resident_city = $this->form->getState()['resident_city'] ?? Null;
+            $church_member->resident_street = $this->form->getState()['resident_street'] ?? Null;
+            $church_member->id_image = $this->form->getState()['id_image'] ?? Null;
+            $church_member->address_details = auth()->user()->residence_status == 'Resident' ? (is_null($this->form->getState()['region_id']) ? Null : 'complete') : (is_null($this->form->getState()['resident_country']) ? Null : 'complete');
             $church_member->jumuiya_id = $this->form->getState()['jumuiya_id'] ?? Null;
             $church_member->received_confirmation = $this->form->getState()['received_confirmation'] ?? Null;
             $church_member->confirmation_place = $this->form->getState()['confirmation_place'] ?? Null;
