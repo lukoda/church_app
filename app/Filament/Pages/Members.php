@@ -209,7 +209,7 @@ class Members extends Page
                                             return $dob->subYears(12);
                                         })
                                         ->validationMessages([
-                                            'error' => 'Only 12 years above are allowed to register as church member.',
+                                            'maxDate' => 'Only 12 years above are allowed to register as church member.',
                                         ]),
 
                                     Select::make('citizenship')
@@ -486,6 +486,7 @@ class Members extends Page
                                                     }),
     
                                                 Select::make('resident_country')
+                                                    ->searchable()
                                                     ->label('Resident Country')
                                                     ->options(Country::all()->pluck('name','code'))
                                                     ->required()
@@ -813,6 +814,14 @@ class Members extends Page
                                             ->columns(2)
                                             ->addable(false)
                                             ->deletable(false)
+                                            ->visible(function (){
+                                                $cards = Card::where('church_id', auth()->user()->church_id)->where('card_status', 'active')->count();
+                                                if($cards == 0){
+                                                    return false;
+                                                }else{
+                                                    return true;
+                                                }
+                                            })
                                             ->defaultItems(function(){
                                                 $cards = Card::where('church_id', auth()->user()->church_id)->where('card_status', 'active')->count();
                                                 return $cards ?? 0;
@@ -858,7 +867,7 @@ class Members extends Page
                                 'personal_details' => 'complete'
                             ]);
                         }else{
-                            if($record->region_id !== Null){
+                            if($record->region_id !== Null || $record->resident_country !== NUll){
                                 $record->update([
                                     'address_details' => 'complete'
                                 ]);

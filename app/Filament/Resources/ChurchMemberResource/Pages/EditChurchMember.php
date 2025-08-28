@@ -52,15 +52,15 @@ class EditChurchMember extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        if($data['nida_id'] !== Null || $data['passport_id'] !== Null){
-            if($data['nida_id'] == Null){
-                $data['identification_type'] = 'passport';
-            }else{
-                if($data['passport_id'] == Null){
-                    $data['identification_type'] = 'nida';
-                }
-            }
-        }
+        // if($data['nida_id'] !== Null || $data['passport_id'] !== Null){
+        //     if($data['nida_id'] == Null){
+        //         $data['identification_type'] = 'passport';
+        //     }else{
+        //         if($data['passport_id'] == Null){
+        //             $data['identification_type'] = 'nida';
+        //         }
+        //     }
+        // }
 
         $data['dependants'] = Dependant::whereChurchMemberId($data['id'])->get();
         return $data;
@@ -68,7 +68,7 @@ class EditChurchMember extends EditRecord
 
     protected function afterSave(): void
     {
-        if($this->record->first_name !== Null && $this->record->region_id !== Null && $this->record->received_confirmation !== Null){
+        if($this->record->first_name !== Null && ($this->record->region_id !== Null || $this->record->resident_country !== Null) && ($this->record->received_confirmation !== Null || $this->record->received_baptism !== Null)){
             $this->record->update([
                 'personal_details' => 'complete',
                 'address_details' => 'complete',
@@ -80,12 +80,12 @@ class EditChurchMember extends EditRecord
                     'personal_details' => 'complete'
                 ]);
             }else{
-                if($this->record->region_id !== Null){
+                if($this->record->region_id !== Null || $this->record->resident_country !== Null){
                     $this->record->update([
                         'address_details' => 'complete'
                     ]);
                 }else{
-                    if($this->record->received_confirmation !== Null){
+                    if($this->record->received_confirmation !== Null || $this->record->received_baptism !== Null){
                         $this->record->update([
                             'spiritual_information' => 'complete'
                         ]);

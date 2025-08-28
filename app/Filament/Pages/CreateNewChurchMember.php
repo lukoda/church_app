@@ -192,7 +192,7 @@ class CreateNewChurchMember extends Page
                                         return $dob->subYears(12);
                                     })
                                     ->validationMessages([
-                                        'error' => 'Only 12 years above are allowed to register as church member.',
+                                        'maxDate' => 'Only 12 years above are allowed to register as church member.',
                                     ]),
 
                                 Select::make('citizenship')
@@ -354,6 +354,7 @@ class CreateNewChurchMember extends Page
                                             'spouse_citizenship' => $get('spouse_citizenship') ?? Null,
                                             'spouse_residence_status' => $get('spouse_residence_status') ?? Null,
                                             'spouse_contact_no' => $get('spouse_contact_no') ?? Null,
+                                            'picture' => $get('picture') ?? Null,
                                             'personal_details' => is_null($get('first_name')) ? Null : 'complete',
                                             'user_id' => auth()->user()->id,
                                             'church_id' => auth()->user()->church_id
@@ -421,6 +422,7 @@ class CreateNewChurchMember extends Page
                                             $church_member->spouse_citizenship = $get('spouse_citizenship') ?? Null;
                                             $church_member->spouse_residence_status = $get('spouse_residence_status') ?? Null;
                                             $church_member->spouse_contact_no = $get('spouse_contact_no') ?? Null;
+                                            $church_member->picture = $get('picture') ?? Null;
                                             $church_member->personal_details = is_null($get('first_name')) ? Null : 'complete';
                                             $church_member->user_id = auth()->user()->id;
                                             $church_member->church_id = auth()->user()->church_id;
@@ -944,7 +946,7 @@ class CreateNewChurchMember extends Page
                                     'profession' => $get('profession') ?? Null,
                                     'skills' => $get('skills') ?? Null,
                                     // 'work_location' => $get('work_location') ?? Null,
-                                    'spiritual_information' => is_null($get('received_baptism') ? Null : 'complete'),
+                                    'spiritual_information' => is_null($get('received_baptism')) || is_null($get('received_confirmation')) ? Null : 'complete',
                                     'user_id' => auth()->user()->id,
                                     'church_id' => auth()->user()->church_id
                                 ]);
@@ -1062,6 +1064,14 @@ class CreateNewChurchMember extends Page
                                         ->columns(2)
                                         ->addable(false)
                                         ->deletable(false)
+                                        ->visible(function (){
+                                            $cards = Card::where('church_id', auth()->user()->church_id)->where('card_status', 'active')->count();
+                                            if($cards == 0){
+                                                return false;
+                                            }else{
+                                                return true;
+                                            }
+                                        })
                                         ->defaultItems(function(){
                                             $cards = Card::where('church_id', auth()->user()->church_id)->where('card_status', 'active')->count();
                                             return $cards ?? 0;
@@ -1278,7 +1288,7 @@ class CreateNewChurchMember extends Page
                 'profession' => $this->form->getState()['profession'] ?? Null,
                 'skills' => $this->form->getState()['skills'] ?? Null,
                 'work_location' => $this->form->getState()['work_location'] ?? Null,
-                'spiritual_information' => is_null($this->form->getState()['received_baptism']) ? Null : 'complete',
+                'spiritual_information' => is_null($this->form->getState()['received_baptism']) || is_null($this->form->getState()['received_confirmation']) ? Null : 'complete',
                 'is_NewMember' => $this->form->getState()['is_NewMember'] ?? Null,
                 'card_no' => $this->form->getState()['card_no'] ?? Null,
                 'user_id' => auth()->user()->id,
@@ -1353,7 +1363,7 @@ class CreateNewChurchMember extends Page
             $church_member->profession = $this->form->getState()['profession'] ?? Null;
             $church_member->skills = $this->form->getState()['skills'] ?? Null;
             $church_member->work_location = $this->form->getState()['work_location'] ?? Null;
-            $church_member->spiritual_information = is_null($this->form->getState()['received_baptism']) ? Null : 'complete';
+            $church_member->spiritual_information = is_null($this->form->getState()['received_baptism']) || is_null($this->form->getState()['received_confirmation']) ? Null : 'complete';
             $church_member->is_NewMember = $this->form->getState()['is_NewMember'] ?? Null;
             $church_member->card_no = $this->form->getState()['card_no'] ?? Null;
             $church_member->user_id = auth()->user()->id;
