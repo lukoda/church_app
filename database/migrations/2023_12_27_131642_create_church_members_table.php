@@ -26,8 +26,8 @@ return new class extends Migration
             $table->string('nida_id')->nullable();
             $table->string('passport_id')->nullable();
             $table->string('driver_id')->nullable();
-            $table->string('picture')->nullable();
-            $table->string('id_image')->nullable();
+            $table->json('picture')->nullable();
+            $table->json('id_image')->nullable();
             $table->boolean('is_NewMember')->nullable();
             $table->integer('card_no')->nullable();
             $table->string('citizenship')->nullable();

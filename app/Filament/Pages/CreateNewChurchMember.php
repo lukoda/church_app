@@ -202,8 +202,10 @@ class CreateNewChurchMember extends Page
 
                                 FileUpload::make('picture')
                                     ->label('Passport Size')
-                                    ->downloadable()
                                     ->nullable()
+                                    ->openable()
+                                    ->downloadable()
+                                    ->previewable()
                                     ->columnSpan('full'),
 
                                 Hidden::make('user_id')
@@ -707,6 +709,8 @@ class CreateNewChurchMember extends Page
                                         ->required()
                                         ->downloadable()
                                         ->nullable()
+                                        ->openable()
+                                        ->previewable()
                                         ->columnSpan('full'),
                                     ])
                                     ->afterValidation(function (Get $get) {

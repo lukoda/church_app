@@ -77,7 +77,9 @@ class ChurchMember extends Model
     protected $casts = [
         'received_confirmation' => 'boolean',
         'received_baptism' => 'boolean',
-        'is_NewMember' => 'boolean'
+        'is_NewMember' => 'boolean',
+        'picture' => 'array',
+        'id_image' => 'array'
     ];
 
     public function dependants(): HasMany
