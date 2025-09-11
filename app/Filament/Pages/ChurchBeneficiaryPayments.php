@@ -108,7 +108,7 @@ class ChurchBeneficiaryPayments extends Page implements HasTable
                 ->actions([
                     Action::make('view_requests')
                     ->url(function(Model $record){
-                        return route('filament.admin.pages.view-request-payments', ['beneficiary_request' => $record->id]);
+                        return route('filament.admin.pages.view-request-payments', ['record' => $record->id]);
                      }),
                 ]);
                 

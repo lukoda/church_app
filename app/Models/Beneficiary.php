@@ -26,6 +26,7 @@ class Beneficiary extends Model
         'mobile_account_name',
         'mobile_account_provider',
         'frequency',
+        'residence_status',
         'church_id',
         'registered_by'
     ];

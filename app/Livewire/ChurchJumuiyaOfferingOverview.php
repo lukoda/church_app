@@ -16,7 +16,23 @@ class ChurchJumuiyaOfferingOverview extends BaseWidget
         $total_unverified_jumuiya_offerings = JumuiyaRevenue::whereIn('jumuiya_id', Jumuiya::where('church_id', auth()->user()->church_id)->pluck('id'))->whereDate('date_recorded', now()->endOfWeek(Carbon::SATURDAY))->where('approval_status', 'Unverified')->sum('amount');
         $total_jumuiya_attendance = JumuiyaRevenue::whereIn('jumuiya_id', Jumuiya::where('church_id', auth()->user()->church_id)->pluck('id'))->whereDate('date_recorded', now()->endOfWeek(Carbon::SATURDAY))->where('approval_status', 'Verified')->sum('jumuiya_attendance');
 
+        $overall_total_jumuiya_offerings = JumuiyaRevenue::whereIn('jumuiya_id', Jumuiya::where('church_id', auth()->user()->church_id)->pluck('id'))->where('approval_status', 'Verified')->sum('amount');
+        $overall_total_unverified_jumuiya_offerings = JumuiyaRevenue::whereIn('jumuiya_id', Jumuiya::where('church_id', auth()->user()->church_id)->pluck('id'))->where('approval_status', 'Unverified')->sum('amount');
+        $overall_total_jumuiya_attendance = JumuiyaRevenue::whereIn('jumuiya_id', Jumuiya::where('church_id', auth()->user()->church_id)->pluck('id'))->where('approval_status', 'Verified')->sum('jumuiya_attendance');
+
         return [
+            Stat::make('Total Verified Offerings', number_format($overall_total_jumuiya_offerings))
+            ->description('This year total verified jumuiya offerings')
+            ->color('success'),
+
+            Stat::make('Total Unverified Offerings', $overall_total_unverified_jumuiya_offerings)
+            ->description('This year total unverified jumuiya offerings')
+            ->color('danger'),
+
+            Stat::make('Total Jumuiya Attendance', number_format($overall_total_jumuiya_attendance))
+            ->description('This year total attendance in jumuiyas')
+            ->color('success'),
+
             Stat::make('Total Verified Offerings', number_format($total_jumuiya_offerings))
             ->description('This week total verified jumuiya offerings')
             ->color('success'),

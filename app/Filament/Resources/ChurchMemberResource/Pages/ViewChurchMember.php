@@ -7,6 +7,7 @@ use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Notifications\Notification;
 use App\Models\ChurchMember;
+use Filament\Forms\Components\Select;
 
 class ViewChurchMember extends ViewRecord
 {
@@ -33,4 +34,5 @@ class ViewChurchMember extends ViewRecord
             redirect()->to(static::getResource()::getUrl('index'));
         }
     }
+
 }

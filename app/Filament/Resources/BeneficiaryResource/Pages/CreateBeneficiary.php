@@ -52,6 +52,7 @@ class CreateBeneficiary extends CreateRecord
             'type' => $data['type'],
             'group_leader_name' => $data['group_leader_name'] ?? Null,
             'gender' => $data['gender'],
+            'residence_status' => $data['residence_status'],
             'phone_no' => $data['phone_no'],
             'frequency' => $data['frequency'],
             'duration' => $data['duration'] ?? Null,
@@ -69,4 +70,10 @@ class CreateBeneficiary extends CreateRecord
 
         return $model;
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+
 }

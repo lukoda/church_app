@@ -34,7 +34,7 @@ class BeneficiaryRequest extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        if(Auth::guard('web')->user()->hasRole('Church Member') && Auth::guard('web')->checkPermissionTo('view BeneficiaryRequest')){
+        if(Auth::guard('web')->user()->hasRole('Church Member') && Auth::guard('web')->user()->checkPermissionTo('view BeneficiaryRequest')){
             return true;
         }else{
             return false;
@@ -75,10 +75,10 @@ class BeneficiaryRequest extends Page implements HasTable
     public function setPledgedRequests()
     {
         $pledged_requests = BeneficiaryDetails::where('church_id', auth()->user()->church_id)->where('begin_date','<=',now())->with('beneficiary_request_items')->whereHas('beneficiary_request_items.beneficiary_request_item_pledges', function(Builder $query){
-            $query->where('user_id', auth()->user()->id)->whereIn('payment_status', ['partial paid', 'unpaid']);
+            $query->where('user_id', auth()->user()->id)->whereIn('payment_status', ['partial paid', 'unpaid', 'paid']);
         })
         ->orWhereHas('request_amount_pledges', function(Builder $query){
-            $query->where('user_id', auth()->user()->id)->whereIn('payment_status', ['partial paid', 'unpaid']);
+            $query->where('user_id', auth()->user()->id)->whereIn('payment_status', ['partial paid', 'unpaid', 'paid']);
         })
         ->count();
 
@@ -107,10 +107,10 @@ class BeneficiaryRequest extends Page implements HasTable
                         return BeneficiaryDetails::query()->where('church_id', auth()->user()->church_id)->where('begin_date','<=',now())->where('end_date','>', now())->doesntHave('beneficiary_request_items.beneficiary_request_item_pledges')->doesntHave('request_amount_pledges')->where('status', 'active')->orderBy('created_at','desc');
                     }else if($this->activeTab == 1){
                         return BeneficiaryDetails::query()->where('church_id', auth()->user()->church_id)->where('begin_date','<=',now())->whereHas('beneficiary_request_items.beneficiary_request_item_pledges', function(Builder $query){
-                            $query->where('user_id', auth()->user()->id)->whereIn('payment_status', ['partial paid', 'unpaid']);
+                            $query->where('user_id', auth()->user()->id)->whereIn('payment_status', ['partial paid', 'unpaid', 'paid']);
                         })
                         ->orWhereHas('request_amount_pledges', function(Builder $query){
-                            $query->where('user_id', auth()->user()->id)->whereIn('payment_status', ['partial paid', 'unpaid']);
+                            $query->where('user_id', auth()->user()->id)->whereIn('payment_status', ['partial paid', 'unpaid', 'paid']);
                         })
                         ->orderBy('created_at','desc');
                         // ->orwhereHas('request_amount_pledges', function (Builder $query){

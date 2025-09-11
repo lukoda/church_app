@@ -102,18 +102,30 @@ class ChurchServiceResource extends Resource
                             $record->update([
                                 'status' => 'active'
                             ]);
+
+                            Notification::make()
+                            ->title('Success')
+                            ->body('Church Service activated sucessfully')
+                            ->sucess()
+                            ->send();
                         }else{
                             if($record->status == 'active'){
                                 $record->update([
                                     'status' => 'inactive'
                                 ]);
+
+                                Notification::make()
+                                ->title('Success')
+                                ->body('Church Service deactivated sucessfully')
+                                ->sucess()
+                                ->send();
                             }
                         }
 
-                        Notification::make()
-                            ->title('Church service status updated successfully')
-                            ->success()
-                            ->send();
+                        // Notification::make()
+                        //     ->title('Church service status updated successfully')
+                        //     ->success()
+                        //     ->send();
                     })
                     ->disabled(! auth()->user()->checkPermissionTo('deactivate ChurchService'))
                     ->visible(auth()->user()->checkPermissionTo('deactivate ChurchService'))

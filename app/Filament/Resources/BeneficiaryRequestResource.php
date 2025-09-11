@@ -202,6 +202,8 @@ class BeneficiaryRequestResource extends Resource
                     ->label('Supporting Documents')
                     ->multiple()
                     ->downloadable()
+                    ->previewable()
+                    ->openable()
                     ->disk('beneficiaryRequestDocuments')
                     ->columnSpan('full'),
 

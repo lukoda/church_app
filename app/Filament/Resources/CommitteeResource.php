@@ -26,6 +26,7 @@ use Filament\Tables\Actions\Action;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rules\Unique;
 
 class CommitteeResource extends Resource
 {
@@ -63,14 +64,24 @@ class CommitteeResource extends Resource
                                 }
 
                                 $eligible_members = ChurchMember::whereNotIn('id',$church_member_id);
-                                return $eligible_members->where('card_no', 'like', "%{$search}%")
+                                return $eligible_members->whereNotNull('jumuiya_id')
+                                                        ->whereNotIn('id', Committee::where('status', 'active')->pluck('church_member_id'))
+                                                        ->where('card_no', 'like', "%{$search}%")
                                                         ->orWhere('surname', 'like', "%{$search}%")
                                                         ->pluck('surname','id')->toArray();
                             })
-                            ->getOptionLabelUsing(fn($value): string => ChurchMember::find('value')->full_name)
+                            ->getOptionLabelUsing(fn($value,$operation, $record): string => $operation == 'edit' ? ChurchMember::find($record->church_member_id)->full_name : ChurchMember::find('value')->full_name)
                             ->helperText('Search by surname or card no')
+                            ->unique(modifyRuleUsing: function (Unique $rule, $state) {
+                                return $rule->where('status', 'active');
+                            })
+                            ->validationMessages([
+                                '*' => 'Each jumuiya can only be assigned one church elder.',
+                            ])
                             ->afterStateUpdated(function($state, Set $set){
-                                $set('jumuiya', Jumuiya::whereId(ChurchMember::whereId($state)->pluck('jumuiya_id'))->where('church_id', auth()->user()->church_id)->pluck('name')[0]);
+                                    if(! blank($state)){
+                                        $set('jumuiya', Jumuiya::whereId(ChurchMember::whereId($state)->pluck('jumuiya_id'))->where('church_id', auth()->user()->church_id)->pluck('name')[0]);
+                                    }
                             }),
 
                         TextInput::make('jumuiya')
@@ -90,8 +101,8 @@ class CommitteeResource extends Resource
                         DatePicker::make('end_date')
                             ->reactive()
                             ->default(fn(Get $get) => blank($get('begin_date')) ? now()->addYears(4) : Carbon::parse($get('begin_date'))->addYears(4))
-                            ->minDate(now()->addYears(4))
-                            ->maxDate(now()->addYears(4)->addMonths(1))
+                            ->minDate(now()->addYears(4)->subDay(1))
+                            // ->maxDate(now()->addYears(4)->addMonths(1))
                             ->required()
                             ->afterStateUpdated(function(Get $get, $state, Set $set){
                                 if(! blank($state)){
@@ -102,16 +113,17 @@ class CommitteeResource extends Resource
                         TextInput::make('serve_duration')
                             ->readOnly()
                             ->numeric()
+                            ->default(fn(Get $get) => Carbon::parse($get('end_date'))->diffInYears($get('begin_date')))
                             ->prefix('Years'),
 
                         Select::make('status')
                             ->options([
-                                'Active' => 'Active',
-                                'Inactive' => 'Inactive'
+                                'active' => 'Active',
+                                'inactive' => 'Inactive'
                             ])
                             ->default(function(string $context){
                                 if($context == 'create'){
-                                    return 'Active';
+                                    return 'active';
                                 }
                             })
                             ->visible(function(string $context){
@@ -125,12 +137,12 @@ class CommitteeResource extends Resource
                             ->required(),
 
                         Hidden::make('status')
-                            ->default('Active'),
+                            ->default('active'),
 
                         TextInput::make('comment')
                             ->required()
                             ->visible(function(Get $get){
-                                if($get('status') == 'Inactive'){
+                                if($get('status') == 'inactive'){
                                     return true;
                                 }else{
                                     return false;
@@ -171,8 +183,8 @@ class CommitteeResource extends Resource
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state){
-                        'Active' => 'success',
-                        'Inactive' => 'danger'
+                        'active' => 'success',
+                        'inactive' => 'danger'
                     }),
 
                 TextColumn::make('comment')
@@ -195,15 +207,15 @@ class CommitteeResource extends Resource
                 ->disabled(! auth()->user()->checkPermissionTo('delete Committee'))
                 ->visible(auth()->user()->checkPermissionTo('delete Committee')),
                 Action::make('Deactivate')
-                    ->label(fn($record) => $record->status == 'Active' ? 'Deactivate' : 'Activate')
+                    ->label(fn($record) => $record->status == 'active' ? 'Deactivate' : 'Activate')
                     ->form([
                         TextInput::make('comment')
-                            ->required(fn($record) => $record->status == 'Activate' ? true : false),
+                            ->required(fn($record) => $record->status == 'activate' ? true : false),
                     ])
                     ->action(function(array $data, $record){
                         $record->update([
                             'comment' => $data['comment'] ?? $record->comment,
-                            'status' => $record->status == 'Inactive' ? 'Active' : 'Inactive'
+                            'status' => $record->status == 'inactive' ? 'active' : 'inactive'
                         ]);
                     })
                     ->disabled(! auth()->user()->checkPermissionto('deactivate Committee'))

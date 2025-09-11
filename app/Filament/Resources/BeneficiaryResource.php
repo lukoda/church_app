@@ -70,6 +70,15 @@ class BeneficiaryResource extends Resource
                                     return false;
                                 }
                             }),
+
+                        Select::make('residence_status')
+                            ->label('Residential Status')
+                            ->live()
+                            ->options([
+                                'Resident' => 'Resident',
+                                'Non Resident' => 'Non Resident'
+                            ])
+                            ->required(),
         
                         Select::make('gender')
                             ->options([

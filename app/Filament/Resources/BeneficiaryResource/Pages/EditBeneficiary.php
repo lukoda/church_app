@@ -212,4 +212,9 @@ class EditBeneficiary extends EditRecord
                 ->visible(auth()->user()->hasRole('Church Secretary') || auth()->user()->checkPermissionTo('update Beneficiary'))
         ];
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

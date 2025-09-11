@@ -210,7 +210,7 @@ class BookingResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        if(auth()->user()->hasRole(['Senior Pastor', 'Pastor', 'Church Secretary', 'SubParish Pastor', 'ChurchDistrict Pastor', 'Diocese Bishop'])){
+        if(auth()->user()->hasRole(['Senior Pastor', 'Pastor', 'Church Secretary', 'SubParish Pastor', 'ChurchDistrict Pastor', 'Diocese Bishop', 'ArchBishop'])){
             return parent::getEloquentQuery()->where('church_id', auth()->user()->church_id);
         }else if(auth()->user()->hasRole('Church Member')){
             return parent::getEloquentQuery()->where('church_member_id', auth()->user()->churchMember->id);

@@ -35,4 +35,9 @@ class EditPastorSchedule extends EditRecord
             ->visible(auth()->user()->hasRole('Church Secretary') || auth()->user()->checkPermissionTo('delete PastorSchedule')),
         ];
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

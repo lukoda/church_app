@@ -109,7 +109,7 @@ class ViewBeneficiaryDetails extends Page implements HasInfolists, HasTable
     {
         $this->setRecordParam();
         if(static::canAccess()){
-            if(BeneficiaryRequest::whereId($this->passed_record_param)->where('begin_date','<=',now())->where('church_id', Auth::guard('web')->user()->church_id)->exists()){
+            if(BeneficiaryRequest::whereId($this->record)->where('begin_date','<=',now())->where('church_id', Auth::guard('web')->user()->church_id)->exists()){
                 abort_unless(static::canAccess(), 403);
             }else{
                 Notification::make()
@@ -421,8 +421,8 @@ class ViewBeneficiaryDetails extends Page implements HasInfolists, HasTable
                                                     ->default(Beneficiary::whereId(BeneficiaryRequest::whereId($this->record)->where('church_id', auth()->user()->church_id)->pluck('beneficiary_id')[0])->pluck('status')[0])
                                                     ->badge()                                                    
                                                     ->color(fn (string $state): string => match ($state) {
-                                                        'Active' => 'success',
-                                                        'Inactive' => 'warning',
+                                                        'active' => 'success',
+                                                        'inactive' => 'warning',
                                                     })
                                                 ]),
 
@@ -707,7 +707,7 @@ class ViewBeneficiaryDetails extends Page implements HasInfolists, HasTable
                             ->body('Payment submitted successfully for verification.')
                             ->send();
                         })
-                        ->visible(fn() => $this->activeTab == 2 ? ($record->amount_completed >= $record->amount_pledged ? false : auth()->user()->checkPermissionTo('create BeneficiaryRequestItemPayment')) : false),
+                        ->visible(fn($record) => $this->activeTab == 2 ? ($record->amount_completed >= $record->amount_pledged ? false : auth()->user()->checkPermissionTo('create BeneficiaryRequestItemPayment')) : false),
 
                         Action::make('add_item_payment')
                             ->fillForm(fn(BeneficiaryRequestItemPledge $record): array => [

@@ -7,11 +7,13 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use App\Models\ChurchMember;
+use App\Models\Committee;
 use App\Models\Ward;
 use App\Models\District;
 use App\Models\Region;
 use App\Models\User;
 use App\Models\JumuiyaChairPerson;
+use App\Models\JumuiyaAccountant;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Tables\Actions\Action;
 use Filament\Notifications\Notification;
@@ -91,7 +93,7 @@ class JumuiyaMembers extends Page implements HasTable
 
     public static function getNavigationBadge(): ?string
     {
-        return Auth::guard('web')->user()->churchMember != Null ? Churchmember::whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->whereNull('status')->whereNotNUll('card_no')->count() : 0;
+        return Auth::guard('web')->user()->churchMember != Null ? Churchmember::whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->whereNotNull('card_no')->whereNull('status')->count() : 0;
     }
 
     /**
@@ -137,7 +139,7 @@ class JumuiyaMembers extends Page implements HasTable
     public function setUnverifiedMembers()
     {
         if(auth()->user()->churchMember){
-            $this->unverified_members = ChurchMember::whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->whereNotNull('card_no')->whereNull('status')->count() ?? 0;
+            $this->unverified_members = ChurchMember::whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->whereNotNull('card_no')->WhereNull('status')->count() ?? 0;
         }else{
             $this->unverified_members = 0;
         }
@@ -146,7 +148,7 @@ class JumuiyaMembers extends Page implements HasTable
     public function setNotApprovedMembers()
     {
         if(auth()->user()->churchMember){
-            $this->notapproved_members = ChurchMember::whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'Disapproved')->count() ?? 0;
+            $this->notapproved_members = ChurchMember::whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'disapproved')->count() ?? 0;
         }else{
             $this->notapproved_members = 0;
         }
@@ -162,25 +164,29 @@ class JumuiyaMembers extends Page implements HasTable
                         if(auth()->user()->churchMember == Null){
                             return ChurchMember::query()->whereId(0);
                         }else{
-                            return ChurchMember::query()->whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->whereIn('status', ['active', 'inactive'])->whereNotNull('card_no')->orderBy('created_at', 'desc');
+                            return ChurchMember::query()->whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'active')->whereNotNull('card_no')->whereHas('jumuiyaMember', function(Builder $query){
+                                $query->whereIn('status', ['active', 'inactive']);
+                            })->orderBy('created_at', 'desc');
                         }
                     }else if($this->activeTab == 1){
                         if(auth()->user()->churchMember == Null){
                             return ChurchMember::query()->whereId(0);
                         }else{
-                            return ChurchMember::query()->whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'active')->whereNotNull('card_no')->orderBy('created_at', 'desc');
+                            return ChurchMember::query()->whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'active')->whereNotNull('card_no')->whereHas('jumuiyaMember', function(Builder $query){
+                                $query->where('status', 'active');
+                            })->orderBy('created_at', 'desc');
                         }
                     }else if($this->activeTab == 2){
                         if(auth()->user()->churchMember == Null){
                             return ChurchMember::query()->whereId(0);
                         }else{
-                            return ChurchMember::query()->whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->whereNull('status')->whereNotNull('card_no')->orderBy('created_at', 'desc');
+                            return ChurchMember::query()->WhereNull('status')->whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->whereNotNull('card_no')->orderBy('created_at', 'desc');
                         }
                     }else if($this->activeTab == 3){
                         if(auth()->user()->churchMember == Null){
                             return ChurchMember::query()->whereId(0);
                         }else{
-                            return ChurchMember::query()->whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'Disapproved')->orderBy('created_at', 'desc');
+                            return ChurchMember::query()->whereNotNull('jumuiya_id')->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'disapproved')->orderBy('created_at', 'desc');
                         }
                     }
                 })
@@ -280,7 +286,7 @@ class JumuiyaMembers extends Page implements HasTable
                                         ->disabled(),
                                     TextInput::make('card_no')
                                         ->disabled()
-                                        ->visible(function(Model $record){
+                                        ->default(function(Model $record){
                                             if($record->card_no != Null){
                                                 return $record->card_no;
                                             }else{
@@ -345,16 +351,20 @@ class JumuiyaMembers extends Page implements HasTable
                                 $jumuiya_member->status = 'active';
                                 $jumuiya_member->save();
 
-                                $user->removeRole('Guest');
-                                $user->assignRole('Church Member');
-
+                                if(auth()->user()->hasRole('Guest')){
+                                    $user->removeRole('Guest');
+                                    $user->assignRole('Church Member');    
+                                }else{
+                                    $user->assignRole('Church Member');    
+                                }
+                                
                                 Notification::make()
                                 ->title('Member successfully approved')
                                 ->success()
                                 ->send();
                             }else if($arguments['status'] == false){
                                 $record->comment = $data['comment'] ?? Null;
-                                $record->status = 'Disapproved';
+                                $record->status = 'disapproved';
                                 $record->physically_approved_by = auth()->user()->id;
                                 $record->date_registered = now();
                                 $record->save();
@@ -368,7 +378,7 @@ class JumuiyaMembers extends Page implements HasTable
 
                         })
                         ->visible(function(Model $record){
-                            if($record->status == Null){
+                            if($record->status == null || blank($record->status)){
                                 if(auth()->user()->checkPermissionTo('verify ChurchMember')){
                                     return true;
                                 }else{
@@ -434,14 +444,19 @@ class JumuiyaMembers extends Page implements HasTable
                         })
                         ->visible(function(Model $record){
                             $jumuiya_member = JumuiyaMember::where('church_member_id', $record->id)->first();
-                            if($jumuiya_member->status == 'active' || $jumuiya_member->status == 'inactive'){
-                                if(auth()->user()->checkPermissionTo('deactivate JumuiyaMember')){
-                                    return true;
+
+                            if(blank($jumuiya_member)){
+                                return false;
+                            }else{
+                                if($jumuiya_member->status == 'active' || $jumuiya_member->status == 'inactive'){
+                                    if(auth()->user()->checkPermissionTo('deactivate JumuiyaMember')){
+                                        return true;
+                                    }else{
+                                        return false;
+                                    }
                                 }else{
                                     return false;
                                 }
-                            }else{
-                                return false;
                             }
                         })
                         ->modalSubmitAction(false)
@@ -463,7 +478,7 @@ class JumuiyaMembers extends Page implements HasTable
                         ->form([
                             Select::make('role')
                                 ->options(function(){
-                                    return DB::table('roles')->where('name', 'like', '%Jumuiya Chairperson%')->orWhere('name', 'like', '%Jumuiya Accountant%')->pluck('name', 'id');
+                                    return DB::table('roles')->where('name', 'like', '%Jumuiya Chairperson%')->orWhere('name', 'like', '%Jumuiya Accountant%')->pluck('name', 'name');
                                 })
                                 ->required(),
                         ])
@@ -518,11 +533,17 @@ class JumuiyaMembers extends Page implements HasTable
                         })
                         ->visible(function(Model $record){
                             if($record->status == 'active'){
-                                if((JumuiyaChairperson::where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'active')->exists() && JumuiyaAccountant::where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'active')->exists())){
+                                if(Committee::where('church_member_id', $record->id)->where('status', 'active')->exists()){
+                                    return false;
+                                }else if((JumuiyaChairperson::where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'active')->exists() && JumuiyaAccountant::where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('status', 'active')->exists())){
                                     return false;
                                 }else{
                                     if(auth()->user()->hasRole('Committee Member') && (auth()->user()->checkPermissionTo('create JumuiyaChairPerson ') || auth()->user()->checkPermissionTo('create JumuiyaAccountant'))){
-                                        return true;
+                                        if((JumuiyaChairperson::where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('church_member_id', $record->id)->where('status', 'active')->exists() || JumuiyaAccountant::where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('church_member_id', $record->id)->where('status', 'active')->exists())){
+                                            return false;
+                                        }else{
+                                            return true;
+                                        }
                                     }else{
                                         return false;
                                     }
@@ -540,6 +561,10 @@ class JumuiyaMembers extends Page implements HasTable
                             if(in_array('Jumuiya Chairperson', $roles)){
                                 $user->removeRole('Jumuiya Chairperson');
 
+                                JumuiyaChairperson::where('church_member_id', $record->id)->update([
+                                    'status' => 'inactive'
+                                ]);
+
                                 Notification::make()
                                 ->title('Successfully unassigned '.$record->full_name.' as Jumuiya Chairperson.')
                                 ->body('Please, specify or assign new Jumuiya Chairperson.')
@@ -555,14 +580,16 @@ class JumuiyaMembers extends Page implements HasTable
                         })
                         ->visible(function(Model $record){
                             $user = User::whereId($record->user_id)->first();
-                            if($user->hasRole('Jumuiya Chairperson') || $user->hasRole('Jumuiya Accountant')){
+                            if(Committee::where('church_member_id',$record->id)->where('status', 'active')->exists()){
+                                return false;
+                            }else if($user->hasRole('Jumuiya Chairperson') || $user->hasRole('Jumuiya Accountant')){
                                 if(auth()->user()->hasRole('Committee Member')){
                                     return true;
                                 }else{
                                     return false;
                                 }
                             }else{
-                                return true;
+                                return false;
                             }
                         })
                 ]);

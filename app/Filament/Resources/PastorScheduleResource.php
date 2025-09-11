@@ -61,26 +61,40 @@ class PastorScheduleResource extends Resource
                                 ->pluck('full_name', 'pastors.id')
                         )
                         ->required()
-                        ->hidden(auth()->user()->hasRole(['Senior Pastor', 'Pastor', 'ChurchDistrict Pastor', 'Diocese Bishop']) ? true : false),
+                        ->default(function(){
+                            if(auth()->user()->hasRole(['Senior Pastor', 'Pastor', 'ChurchDistrict Pastor', 'Diocese Bishop', 'ArchBishop'])){
+                                return DB::table('pastors')
+                                        ->join('church_members','church_members.id', '=', 'pastors.church_member_id')
+                                        ->where('church_assigned_id', auth()->user()->church_id)
+                                        ->pluck('pastors.id')[0];
+                            }
+                        })
+                        ->disabled(fn() : bool => auth()->user()->hasRole(['Senior Pastor', 'Pastor', 'ChurchDistrict Pastor', 'Diocese Bishop', 'ArchBishop']) ? true: false)
+                        ->hidden(auth()->user()->hasRole(['Senior Pastor', 'Pastor', 'ChurchDistrict Pastor', 'Diocese Bishop', 'ArchBishop']) ? true : false),
 
                     TextInput::make('pastor')
                         ->default(function(){
-                            return DB::table('pastors')
-                                        ->join('church_members','church_members.id', '=', 'pastors.church_member_id')
-                                        ->where('church_assigned_id', auth()->user()->church_id)
-                                        ->pluck('full_name')[0];
+                            if(Pastor::where('church_assigned_id', auth()->user()->church_id)->where('status', 'active')->exists()){
+                                return DB::table('pastors')
+                                ->join('church_members','church_members.id', '=', 'pastors.church_member_id')
+                                ->where('church_assigned_id', auth()->user()->church_id)
+                                ->pluck('full_name')[0];
+                            }else{
+                                return "";
+                            }
+
                         })
                         ->readOnly()
-                        ->hidden(auth()->user()->hasRole(['Senior Pastor', 'Pastor', 'ChurchDistrict Pastor', 'Diocese Bishop']) ? true : false),
+                        ->hidden(auth()->user()->hasRole(['Senior Pastor', 'Pastor', 'ChurchDistrict Pastor', 'Diocese Bishop', 'ArchBishop']) ? false : true),
 
-                    Hidden::make('pastor')
+                    Hidden::make('pastor_id')
                         ->default(function(){
                             return DB::table('pastors')
                                         ->join('church_members','church_members.id', '=', 'pastors.church_member_id')
                                         ->where('church_assigned_id', auth()->user()->church_id)
                                         ->pluck('pastors.id')[0];
                         })
-                        ->hidden(auth()->user()->hasRole(['Senior Pastor', 'Pastor', 'ChurchDistrict Pastor', 'Diocese Bishop']) ? true : false),
+                        ->hidden(auth()->user()->hasRole(['Senior Pastor', 'Pastor', 'ChurchDistrict Pastor', 'Diocese Bishop', 'ArchBishop']) ? false : true),
 
                 Repeater::make('schedule')
                     ->relationship('schedules')
@@ -183,18 +197,29 @@ class PastorScheduleResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('day')
-                    ->date(),
+                TextColumn::make('schedules.day')
+                    ->label('Day')
+                    ->date()
+                    ->listWithLineBreaks()
+                    ->limitList(3),
+                TextColumn::make('schedules.day_of_week')
+                    ->label('Week Day')
+                    // ->date()
+                    ->listWithLineBreaks()
+                    ->limitList(3),
                 TextColumn::make('schedules.from')
+                    ->label('From')
                     ->time('H:i A')
                     ->listWithLineBreaks()
                     ->limitList(3)
                     ->bulleted(),
                 TextColumn::make('schedules.to')
+                    ->label('To')
                     ->time('H:i A')
                     ->listWithLineBreaks()
                     ->limitList(3),
                 TextColumn::make('schedules.status')
+                    ->label('Status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         '' => 'warning',

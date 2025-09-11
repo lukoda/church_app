@@ -37,6 +37,7 @@ use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Church;
 use App\Models\ChurchDistrict;
+use App\Models\Dependant;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Facades\Blade;
 
@@ -192,7 +193,7 @@ class CreateNewChurchMember extends Page
                                         return $dob->subYears(12);
                                     })
                                     ->validationMessages([
-                                        'maxDate' => 'Only 12 years above are allowed to register as church member.',
+                                        '*' => 'Only 12 years above are allowed to register as church member.',
                                     ]),
 
                                 Select::make('citizenship')
@@ -202,7 +203,6 @@ class CreateNewChurchMember extends Page
 
                                 FileUpload::make('picture')
                                     ->label('Passport Size')
-                                    ->nullable()
                                     ->openable()
                                     ->downloadable()
                                     ->previewable()
@@ -336,7 +336,16 @@ class CreateNewChurchMember extends Page
                                     ->columns(4)
                                     ->hidden(fn (Get $get): bool => ! $get('has_dependants'))
                                 ])
-                                ->afterValidation(function(Get $get){
+                                ->afterValidation(function(Get $get, $state){
+                                    $picture = null;
+                                    if (is_array($state['picture'])) {
+                                        foreach ($state['picture'] as $file) {
+                                            if ($file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile) {
+                                                $path = $file->store('/', 'public');
+                                                $picture = $path;  
+                                            }
+                                        }
+                                    }
 
                                     if(ChurchMember::where('user_id', auth()->user()->id)->count() > 0){
                                         $church_member = ChurchMember::where('user_id', auth()->user()->id)->first();
@@ -356,7 +365,7 @@ class CreateNewChurchMember extends Page
                                             'spouse_citizenship' => $get('spouse_citizenship') ?? Null,
                                             'spouse_residence_status' => $get('spouse_residence_status') ?? Null,
                                             'spouse_contact_no' => $get('spouse_contact_no') ?? Null,
-                                            'picture' => $get('picture') ?? Null,
+                                            'picture' => $picture ?? Null,
                                             'personal_details' => is_null($get('first_name')) ? Null : 'complete',
                                             'user_id' => auth()->user()->id,
                                             'church_id' => auth()->user()->church_id
@@ -407,6 +416,14 @@ class CreateNewChurchMember extends Page
                                             ->send();
 
                                             throw new Halt();
+                                        }else if(ChurchMember::where('email', $get('email'))->whereNotNull('email')->exists()){
+                                            Notification::make()
+                                            ->title('Email Exists')
+                                            ->body('Member with same email already exists.')
+                                            ->danger()
+                                            ->send();
+
+                                            throw new Halt();
                                         }else{
                                             $church_member = new ChurchMember;
                                             $church_member->first_name = $get('first_name') ?? Null;
@@ -424,7 +441,7 @@ class CreateNewChurchMember extends Page
                                             $church_member->spouse_citizenship = $get('spouse_citizenship') ?? Null;
                                             $church_member->spouse_residence_status = $get('spouse_residence_status') ?? Null;
                                             $church_member->spouse_contact_no = $get('spouse_contact_no') ?? Null;
-                                            $church_member->picture = $get('picture') ?? Null;
+                                            $church_member->picture = $picture ?? Null;
                                             $church_member->personal_details = is_null($get('first_name')) ? Null : 'complete';
                                             $church_member->user_id = auth()->user()->id;
                                             $church_member->church_id = auth()->user()->church_id;
@@ -711,9 +728,18 @@ class CreateNewChurchMember extends Page
                                         ->nullable()
                                         ->openable()
                                         ->previewable()
-                                        ->columnSpan('full'),
+                                        ->columnSpan('full')
                                     ])
-                                    ->afterValidation(function (Get $get) {
+                                    ->afterValidation(function (Get $get, $state) {
+                                        $id_mage = null;
+                                        if (is_array($state['picture'])) {
+                                            foreach ($state['picture'] as $file) {
+                                                if ($file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile) {
+                                                    $path = $file->store('/', 'public');
+                                                    $id_mage = $path;
+                                                }
+                                            }
+                                        }
                                         if(ChurchMember::where('user_id', auth()->user()->id)->count() > 0){
                                             $church_member = ChurchMember::where('user_id', auth()->user()->id)->first();
                                             $church_member->update([
@@ -722,7 +748,7 @@ class CreateNewChurchMember extends Page
                                                 'passport_id' => $get('passport_id') ?? Null,
                                                 'driver_id' => $get('driver_id') ?? Null,
                                                 // 'picture' => $get('picture') ?? Null,
-                                                'id_image' => $get('id_image') ?? Null,
+                                                'id_image' => $id_mage ?? Null,
                                                 'user_id' => auth()->user()->id,
                                                 'church_id' => auth()->user()->church_id
                                             ]);
@@ -764,12 +790,12 @@ class CreateNewChurchMember extends Page
                                             })
                                             ->disabled()
                                     ])
-                                    ->hidden(function(){
+                                    ->hidden(function(Get $get){
                                         if(Jumuiya::all()->count() <= 0){
                                             return true;
-                                        }else if($get('residence_status') == 'Non Resident'){
+                                        }else if(auth()->user()->residence_status == 'Non Resident'){
                                             return true;
-                                        }else if($get('residence_status') == 'Resident'){
+                                        }else if(auth()->user()->residence_status == 'Resident'){
                                             return false;
                                         }else{
                                             return false;
@@ -1051,6 +1077,7 @@ class CreateNewChurchMember extends Page
                                     ->schema([
                                             Select::make('card_type')
                                                 ->options(Card::where('church_id', auth()->user()->church_id)->where('card_status', 'active')->pluck('card_name', 'id')->toArray())
+                                                ->required()
                                                 ->searchable()
                                                 // ->default(function(Repeater $component){
                                                 //     $cards = Card::where('church_id', auth()->user()->church_id)->where('card_status', 'active')->pluck('card_name', 'id')->toArray();
@@ -1061,19 +1088,23 @@ class CreateNewChurchMember extends Page
                                                 ->distinct(),
 
                                             TextInput::make('amount_pledged')
+                                                ->required()
                                                 ->numeric(),
-
                                         ])
                                         ->columnSpan('full')
                                         ->columns(2)
                                         ->addable(false)
                                         ->deletable(false)
-                                        ->visible(function (){
+                                        ->visible(function (Get $get){
                                             $cards = Card::where('church_id', auth()->user()->church_id)->where('card_status', 'active')->count();
                                             if($cards == 0){
                                                 return false;
                                             }else{
-                                                return true;
+                                                if($get('is_NewMember')){
+                                                    return false;
+                                                }else{
+                                                    return true;
+                                                }
                                             }
                                         })
                                         ->defaultItems(function(){
@@ -1149,7 +1180,7 @@ class CreateNewChurchMember extends Page
                                                 $card_pledge->date_pledged = $church_member->created_at;
                                                 $card_pledge->created_by = auth()->user()->id;
                                                 $card_pledge->church_id = auth()->user()->church_id;
-                                                $card_pledge->status = 'Active';
+                                                $card_pledge->status = 'active';
                                                 $card_pledge->save();
                                             }
                                         }
@@ -1244,6 +1275,38 @@ class CreateNewChurchMember extends Page
 
     public function createChurchMember(): void
     {
+        // $picture = null;
+        // $id_image = null;
+        // if (is_array($this->form->getState()['picture'])) {
+        //     foreach ($this->form->getState()['picture'] as $file) {
+        //         if ($file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile) {
+        //             $path = $file->store('/', 'public');
+        //             $picture = $path;  
+        //         }
+        //     }
+        // }else{
+        //     $file = $this->form->getState()['picture'];
+        //     if ($file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile) {
+        //         $path = $file->store('/', 'public');
+        //         $picture = $path;  
+        //     }
+        // }
+        // if (is_array($this->form->getState()['id_image'])) {
+        //     foreach ($this->form->getState()['id_image'] as $file) {
+        //         if ($file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile) {
+        //             $path = $file->store('/', 'public');
+        //             $id_image = $path;  
+        //         }
+        //     }
+        // }else{
+        //     $file = $this->form->getState()['id_image'];
+        //     if ($file instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile) {
+        //         $path = $file->store('/', 'public');
+        //         $id_image = $path;  
+        //     }
+        // }
+
+
         if(ChurchMember::where('user_id', auth()->user()->id)->count() > 0){
             $church_member = ChurchMember::where('user_id', auth()->user()->id)->first();
             $church_member->update([
@@ -1317,8 +1380,73 @@ class CreateNewChurchMember extends Page
                         $member_dependants->save();
                     }
 
+                }else{
+
+                    foreach($dependants as $dependant){
+                        $member_dependants = new Dependant;
+                        $member_dependants->first_name = $dependant['first_name'];
+                        $member_dependants->middle_name = $dependant['middle_name'];
+                        $member_dependants->surname = $dependant['surname'];
+                        $member_dependants->gender = $dependant['gender'];
+                        $member_dependants->date_of_birth = $dependant['date_of_birth'];
+                        $member_dependants->relationship = $dependant['relationship'];
+                        $member_dependants->church_member_id = $church_member->id;
+                        $member_dependants->save();
+                    }
                 }
             }
+
+            $cardPledges =  $this->form->getState()['is_NewMember'] ? Null : $this->form->getState()['Card Pledges'];
+
+            if($cardPledges != Null){
+    
+                if(CardPledge::where('church_member_id', $church_member->id)->exists()){
+
+                    foreach($this->form->getState()['Card Pledges'] as $pledge){
+                        if($pledge['card_type'] != Null && $pledge['amount_pledged'] != Null){
+                            if(CardPledge::where('church_member_id', $church_member->id)->where('card_id', $pledge['card_type'])->where('card_no',$church_member->card_no)->exists()){
+                                CardPledge::where('church_member_id', $church_member->id)->where('card_id', $pledge['card_type'])->where('card_no',$church_member->card_no)->update([
+                                    'amount_pledged' => $pledge['amount_pledged'],
+                                    'created_by' => auth()->user()->id,
+                                    'church_id' => auth()->user()->church_id,
+                                    'status' => 'active'
+                                ]); 
+                            }else{
+                                $card_pledge = new CardPledge;
+                                $card_pledge->church_member_id = $church_member->id;
+                                $card_pledge->card_id = $pledge['card_type'];
+                                $card_pledge->card_no = $church_member->card_no ?? Null;
+                                $card_pledge->amount_pledged = $pledge['amount_pledged'];
+                                $card_pledge->amount_remains = 0;
+                                $card_pledge->amount_completed = 0;
+                                $card_pledge->date_pledged = $church_member->created_at;
+                                $card_pledge->created_by = auth()->user()->id;
+                                $card_pledge->church_id = auth()->user()->church_id;
+                                $card_pledge->status = 'active';
+                                $card_pledge->save();
+                            }
+                        }
+                    }
+                }else{
+                    foreach($this->form->getState()['Card Pledges'] as $pledge){
+                        if($pledge['card_type'] != Null && $pledge['amount_pledged'] != Null){
+                            $card_pledge = new CardPledge;
+                            $card_pledge->church_member_id = $church_member->id;
+                            $card_pledge->card_id = $pledge['card_type'];
+                            $card_pledge->card_no = $$church_member->card_no ?? Null;
+                            $card_pledge->amount_pledged = $pledge['amount_pledged'];
+                            $card_pledge->amount_remains = 0;
+                            $card_pledge->amount_completed = 0;
+                            $card_pledge->date_pledged = $church_member->created_at;
+                            $card_pledge->created_by = auth()->user()->id;
+                            $card_pledge->church_id = auth()->user()->church_id;
+                            $card_pledge->status = 'active';
+                            $card_pledge->save();
+                        }
+                    }
+                }
+            }
+
 
         }else{
             $church_member = new ChurchMember;
@@ -1390,7 +1518,9 @@ class CreateNewChurchMember extends Page
             }
         }
 
-        if(count($this->form->getState()['Card Pledges']) > 0){
+        $cardPledges =  $this->form->getState()['is_NewMember'] ? Null : $this->form->getState()['Card Pledges'];
+
+        if($cardPledges != Null){
 
             foreach($this->form->getState()['Card Pledges'] as $pledge){
                 if($pledge['card_type'] != Null && $pledge['amount_pledged'] != Null){
@@ -1404,7 +1534,7 @@ class CreateNewChurchMember extends Page
                     $card_pledge->date_pledged = $church_member->created_at;
                     $card_pledge->created_by = auth()->user()->id;
                     $card_pledge->church_id = auth()->user()->church_id;
-                    $card_pledge->status = 'Active';
+                    $card_pledge->status = 'active';
                     $card_pledge->save();
                 }
             }
@@ -1412,5 +1542,6 @@ class CreateNewChurchMember extends Page
 
         redirect()->to('admin/members');
     }
+
 
 }

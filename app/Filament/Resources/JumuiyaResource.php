@@ -123,10 +123,10 @@ class JumuiyaResource extends Resource
         
                         Select::make('status')
                             ->options([
-                                'Active' => 'Active',
-                                'Inactive' => 'Inactive'
+                                'active' => 'Active',
+                                'inactive' => 'Inactive'
                             ])
-                            ->default('Active'),
+                            ->default('active'),
                     ])
             ]);
     }
@@ -151,8 +151,8 @@ class JumuiyaResource extends Resource
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state){
-                        'Active' => 'success',
-                        'Inactive' => 'danger'
+                        'active' => 'success',
+                        'inactive' => 'danger'
                     })
             ])
             ->filters([

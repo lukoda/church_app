@@ -11,6 +11,7 @@ use App\Models\BeneficiaryRequestItem;
 use App\Models\Beneficiary;
 use App\Models\User;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Hash;
 
 class CreateBeneficiaryRequest extends CreateRecord
 {
@@ -72,7 +73,7 @@ class CreateBeneficiaryRequest extends CreateRecord
             'months' => $data['months'] ?? Null,
             'inactive_on' => $data['inactive_on'] ?? Null,
             'amount_threshold' => $data['amount_threshold'] ?? Null,
-            'status' => 'Active',
+            'status' => 'active',
             'purpose' => $data['purpose'],
             'supporting_documents' => $data['supporting_documents'],
             'end_date' => $data['frequency'] == 'amount' ? $data['end_date'] : $end_date,
@@ -82,22 +83,30 @@ class CreateBeneficiaryRequest extends CreateRecord
         if(! User::where('phone', Beneficiary::whereId($data['beneficiary_id'])->pluck('phone_no')[0])->exists()){
             $user = new User;
             $user->phone = Beneficiary::whereId($data['beneficiary_id'])->pluck('phone_no')[0];
-            $user->password = $data['beneficiary_type'] == 'group' ? strtoupper(str_replace(' ', '', Beneficiary::whereId($data['beneficiary_id'])->pluck('group_leader_name')[0])) : strtoupper(str_replace(' ', '', Beneficiary::whereId($data['beneficiary_id'])->pluck('name')[0]));
+            // $user->password = $data['beneficiary_type'] == 'group' ? strtoupper(str_replace(' ', '', Beneficiary::whereId($data['beneficiary_id'])->pluck('group_leader_name')[0])) : strtoupper(str_replace(' ', '', Beneficiary::whereId($data['beneficiary_id'])->pluck('name')[0]));
+            $user->password = Beneficiary::whereId($data['beneficiary_id'])->pluck('phone_no')[0];
             $user->church_id = auth()->user()->church_id;
             $user->dinomination_id = auth()->user()->dinomination_id;
+            $user->residence_status = Beneficiary::whereId($data['beneficiary_id'])->pluck('residence_status')[0];
             $user->save();
     
             $user->assignRole('Beneficiary');
         }else if(User::where('phone', Beneficiary::whereId($data['beneficiary_id'])->pluck('phone_no')[0])->exists()){
             $user = User::where('phone', Beneficiary::whereId($data['beneficiary_id'])->pluck('phone_no')[0])->first();
             $user->phone = Beneficiary::whereId($data['beneficiary_id'])->pluck('phone_no')[0];
-            $user->password = $data['beneficiary_type'] == 'group' ? strtoupper(str_replace(' ', '', Beneficiary::whereId($data['beneficiary_id'])->pluck('group_leader_name')[0])) : strtoupper(str_replace(' ', '', Beneficiary::whereId($data['beneficiary_id'])->pluck('name')[0]));
+            // $user->password = $data['beneficiary_type'] == 'group' ? strtoupper(str_replace(' ', '', Beneficiary::whereId($data['beneficiary_id'])->pluck('group_leader_name')[0])) : strtoupper(str_replace(' ', '', Beneficiary::whereId($data['beneficiary_id'])->pluck('name')[0]));
+            $user->password = Beneficiary::whereId($data['beneficiary_id'])->pluck('phone_no')[0];
             $user->save();
 
             $user->assignRole('Beneficiary');
         }
 
         return $model;
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
     }
 
     // protected function afterCreate(): void

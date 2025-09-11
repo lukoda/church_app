@@ -82,7 +82,7 @@ class ChurchJumuiyaRevenue extends Page implements HasTable
                 ->emptyStateDescription('Once jumuiya revenues are registered will appear here')
                 ->actions([
                     Action::make('verify_offerrings')
-                    ->label(fn(Model $record) => $record->approval_status == 'Verified' ? 'Verify' : 'Unverify')
+                    ->label(fn(Model $record) => $record->approval_status == 'Verified'  ? 'Unverify' : 'Verify')
                     ->action(function(Model $record){
                         if($record->approval_status == 'Verified'){
                             $record->update([

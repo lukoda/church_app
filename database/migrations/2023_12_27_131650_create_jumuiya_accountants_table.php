@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('church_member_id')->constrained();
             $table->foreignId('jumuiya_id')->constrained();
             $table->date('date_registered');
-            $table->integer('status');
+            $table->string('status');
             $table->timestamps();
         });
     }

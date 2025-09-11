@@ -77,7 +77,7 @@ class CreateChurchMember extends CreateRecord
                     $card_pledge->date_pledged = $this->record->created_at;
                     $card_pledge->created_by = auth()->user()->id;
                     $card_pledge->church_id = auth()->user()->church_id;
-                    $card_pledge->status = 'Active';
+                    $card_pledge->status = 'active';
                     $card_pledge->save();
                 }
             }

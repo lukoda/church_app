@@ -81,7 +81,7 @@ class JumuiyaOfferings extends Page implements HasTable
         return $table
                 ->heading('Logged Jumuiya Offerings')
                 ->query(function(){
-                    if(auth()->user()->has('churchMember')){
+                    if(! auth()->user()->has('churchMember')){
                         return JumuiyaRevenue::query()->whereId(0);
                     }else{
                         return JumuiyaRevenue::query()->where('jumuiya_id', auth()->user()->churchMember->jumuiya_id)->where('approval_status', 'Verified')->orderBy('date_recorded', 'desc');
@@ -107,8 +107,15 @@ class JumuiyaOfferings extends Page implements HasTable
                         ->formatStateUsing(function ($state){
                             if($state == Null){
                                 return "Pending";
+                            }else{
+                                return $state;
                             }
                         })
+                        ->badge()
+                        ->color(fn (string $state): string => match ($state) {
+                            'Unverified' => 'warning',
+                            'Verified' => 'success',
+                        })  
                 ])
                 ->emptyStateIcon('fas-money-bill-transfer')
                 ->emptyStateHeading('No registered jumuiya offerings')

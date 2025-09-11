@@ -62,7 +62,7 @@ class User extends Authenticatable implements HasName, HasAvatar, FilamentUser
 
     public function getFilamentAvatarUrl(): ?string
     {
-        return $this->churchMember ? "storage/{$this->churchMember->picture}" : Null;
+        return $this->churchMember ? ($this->churchMember->picture != null ? asset("storage/{$this->churchMember->picture}") : null) : Null;
     }
 
     public function churchMember(): HasOne

@@ -29,7 +29,7 @@ class ListBeneficiaries extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-            ->visible(auth()->user()->hasRole('Church Secretary') || auth()->user()->checkPermissionTo('create Beneficiary')),
+            ->visible(auth()->user()->hasRole('Church Secretary') || auth()->user()->checkPermissionTo('create Beneficiary'))
         ];
     }
 }

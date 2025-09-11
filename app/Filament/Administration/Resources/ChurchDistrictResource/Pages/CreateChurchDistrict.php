@@ -28,8 +28,8 @@ class CreateChurchDistrict extends CreateRecord
                 redirect()->to(static::getResource()::getUrl('index'));
             }else if(auth()->user()->hasRole('Dinomination Admin') && ChurchDistrict::count() > 0){
                 Notification::make()
-                ->title('Please create dinomination church district with assigned diocese admin')
-                ->body('Since, church districts exist please proceed in creating church')
+                ->title('Please create dinomination church with assigned diocese admin')
+                ->body('Since, church districts exist please proceed in creating dinomination church')
                 ->danger()
                 ->send();
                 redirect()->to(static::getResource()::getUrl('index'));

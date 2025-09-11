@@ -22,6 +22,7 @@ use Filament\Forms\Get;
 use Illuminate\Validation\Rules\Unique;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Tables\Columns\ColorColumn;
+use Filament\Notifications\Notification;
 
 class CardResource extends Resource
 {
@@ -149,6 +150,39 @@ class CardResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make()
                 ->visible((auth()->user()->hasRole('Church Secretary')) && auth()->user()->checkPermissionTo('update Card')),
+                Tables\Actions\Action::make('deactivate')
+                ->label(fn($record) : string => $record->card_status == 'active' ? 'Deactivate' : 'Activate')
+                ->action(function($record){
+                    if($record->card_status == 'active'){
+                        $record->update([
+                            'card_status' => 'inactive'
+                        ]);
+
+                        Notification::make()
+                        ->title('Success')
+                        ->body('Card deactivated sucessfully')
+                        ->sucess()
+                        ->send();
+
+                    }else if($record->card_status == 'inactive'){
+                        $record->update([
+                            'card_status' => 'active'
+                        ]);
+
+                        Notification::make()
+                        ->title('Success')
+                        ->body('Card activated sucessfully')
+                        ->success()
+                        ->send();
+
+                    }else{
+                        Notification::make()
+                        ->title('Failed to change card status')
+                        ->body('Please, try again failed to update card status.')
+                        ->danger()
+                        ->send();
+                    }
+                })
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

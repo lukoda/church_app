@@ -58,10 +58,17 @@ class MemberCardPledges extends Page implements HasTable
                     ->danger()
                     ->send();
                     redirect()->to('/admin/members');
-                }else if(ChurchMember::where('id', Auth::guard('web')->user()->churchMember->id)->where('status', 'inactive')->exists()){
+                }else if(ChurchMember::where('id', Auth::guard('web')->user()->churchMember->id)->whereNull('status')->exists()){
                     Notification::make()
                     ->title('Pending approval member registration')
                     ->body('Contact your church secretary to approve your registration request, before adding pledges')
+                    ->danger()
+                    ->send();
+                    redirect()->to('/admin/members');
+                }else if(ChurchMember::where('id', Auth::guard('web')->user()->churchMember->id)->where('status', 'inactive')->exists()){
+                    Notification::make()
+                    ->title('Account is inactive')
+                    ->body('Contact your church secretary to activate your account, before adding pledges')
                     ->danger()
                     ->send();
                     redirect()->to('/admin/members');

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('group_leader_name')->nullable();
+            $table->string('residence_status');
             $table->string('type');
             $table->string('gender');
             $table->string('phone_no');

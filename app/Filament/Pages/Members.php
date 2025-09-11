@@ -94,7 +94,7 @@ class Members extends Page
                     if($member->status == 'active'){
                         return "Verified Member";
                     }else{
-                        return "Registration Complete";
+                        return "Registration Complete, Awaiting Verification";
                     }
                 }else{
                     return "Please enter your annual pledges";
@@ -618,7 +618,7 @@ class Members extends Page
                                                 })
                                                 ->disabled()
                                         ])
-                                        ->hidden(function(){
+                                        ->hidden(function(Get $get){
                                             if(Jumuiya::all()->count() <= 0){
                                                 return true;
                                             }else if($get('residence_status') == 'Non Resident'){
@@ -745,8 +745,8 @@ class Members extends Page
                                                         // TextInput::make('work_location')
                                                         //     ->nullable(),
 
-                                                        Hidden::make('status')
-                                                            ->default('inactive'),
+                                                        // Hidden::make('status')
+                                                        //     ->default('inactive'),
 
                                                     ])
                                         ])
@@ -801,7 +801,7 @@ class Members extends Page
                                     Repeater::make('Card Pledges')
                                         ->schema([
                                                 Select::make('card_type')
-                                                    ->options(Card::where('church_id', auth()->user()->church_id)->pluck('card_name', 'id')->toArray())
+                                                    ->options(Card::where('church_id', auth()->user()->church_id)->where('card_status', 'active')->pluck('card_name', 'id')->toArray())
                                                     ->searchable()
                                                     ->distinct(),
 
@@ -1044,7 +1044,7 @@ class Members extends Page
                                     TextEntry::make('jumuiya_id')
                                         ->label('Member Jumuiya')
                                         ->state(function(Model $record){
-                                            return Jumuiya::whereId($record->jumiya_id)->pluck('name');
+                                            return Jumuiya::whereId($record->jumuiya_id)->pluck('name');
                                         })
                                         ->placeholder('No Jumuiya Specified'),
                                     TextEntry::make('jumuiya_location')

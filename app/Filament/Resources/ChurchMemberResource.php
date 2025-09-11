@@ -8,6 +8,7 @@ use App\Models\ChurchMember;
 use App\Models\Church;
 use App\Models\User;
 use App\Models\Card;
+use App\Models\Country;
 use Filament\Forms;
 use App\Models\Region;
 use App\Models\District;
@@ -47,6 +48,9 @@ use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\IconEntry;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Components\Radio;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Blade;
+use Carbon\Carbon;
 
 class ChurchMemberResource extends Resource
 {
@@ -334,8 +338,7 @@ class ChurchMemberResource extends Resource
                                     ])
                                     ->grid(2)
                                     ->columns(2)
-                                    ->hidden(fn(Model $record) => $record->pledges ? false : true)
-                                    ->description('Annual Pledges'),
+                                    ->hidden(fn(Model $record) => $record->pledges ? false : true),
 
                             ])
                             ->visible(function(Model $record){
@@ -416,12 +419,12 @@ class ChurchMemberResource extends Resource
 
                                 DatePicker::make('date_of_birth')
                                     ->required()
-                                    ->maxDate(function(string $state){
-                                        $dob = Carbon::parse($state);
-                                        return $dob->addYears(12);
+                                    ->maxDate(function(){
+                                        $dob = Carbon::now();
+                                        return $dob->subYears(12);
                                     })
                                     ->validationMessages([
-                                        'maxDate' => 'Only 12 years above are allowed to register as church member.',
+                                        '*' => 'Only 12 years above are allowed to register as church member.',
                                     ]),
 
 
@@ -432,8 +435,9 @@ class ChurchMemberResource extends Resource
 
                                 FileUpload::make('picture')
                                     ->label('Passport Size')
+                                    ->openable()
                                     ->downloadable()
-                                    ->nullable()
+                                    ->previewable()
                                     ->columnSpan('full'),
 
                                 Hidden::make('user_id')
@@ -741,7 +745,7 @@ class ChurchMemberResource extends Resource
                                             TextInput::make('resident_city')
                                             ->label('Resident City')
                                             ->required()
-                                            ->visible(function(){
+                                            ->visible(function(Get $get){
                                                 if($get('residence_status') == 'Non Resident'){
                                                     return true;
                                                 }else if($get('residence_status') == 'Resident'){
@@ -754,7 +758,7 @@ class ChurchMemberResource extends Resource
                                             TextInput::make('resident_street')
                                             ->label('Resident Street')
                                             ->nullable()
-                                            ->visible(function(){
+                                            ->visible(function(Get $get){
                                                 if($get('residence_status') == 'Non Resident'){
                                                     return true;
                                                 }else if($get('residence_status') == 'Resident'){
@@ -825,9 +829,12 @@ class ChurchMemberResource extends Resource
                                 
                                 FileUpload::make('id_image')
                                     ->label('ID Image')
+                                    ->required()
                                     ->downloadable()
                                     ->nullable()
-                                    ->columnSpan('full'),
+                                    ->openable()
+                                    ->previewable()
+                                    ->columnSpan('full')
 
                                 ]),
 
@@ -1009,7 +1016,7 @@ class ChurchMemberResource extends Resource
                                                     //     ->hidden(),
 
                                                     Hidden::make('status')
-                                                        ->default('inactive'),
+                                                        ->default('active'),
 
                                                 ])
                                     ])
@@ -1178,8 +1185,8 @@ class ChurchMemberResource extends Resource
                 Tables\Actions\ViewAction::make()
                 ->hidden(auth()->user()->checkPermissionTo('view ChurchMember')),
                 Action::make('approve')
-                    ->label(function($record){
-                        if($record->comment != Null && $record->status == 'active'){
+                    ->label(function($record) : string {
+                        if($record->comment && $record->status == 'active'){
                             return 'Physically approved';
                         }else{
                             return 'Physical Approve';
@@ -1211,14 +1218,14 @@ class ChurchMemberResource extends Resource
                             })
                             ->required(),
                     ])
-                    ->action(function(array $data, ChurchMember $record): void{
+                    ->action(function(array $data, $record): void{
                         $record->comment = $data['comment'] ?? Null;
                         $record->status = $data['status'];
                         $record->physically_approved_by = auth()->user()->id;
                         $record->date_registered = now();
                         $record->save();
 
-                        if(! User::wherePhone($this->record->phone)->exists()){
+                        if(! User::wherePhone($record->phone)->exists()){
                             $user = new User;
                             $user->phone = $this->record->phone;
                             $user->password = Hash::make($this->record->phone);
@@ -1230,6 +1237,12 @@ class ChurchMemberResource extends Resource
                             $this->record->update([
                                 'user_id' => $user->id
                             ]);
+
+                            $user->assignRole('Church Member');
+                        }else{
+                            $churchMemberUsrId = ChurchMember::whereId($record->id)->where('status', 'active')->pluck('user_id')[0];
+                            $userAssignRole = User::whereId($churchMemberUsrId)->first();
+                            $userAssignRole->assignRole('Church Member');
                         }
 
                         Notification::make()
@@ -1245,13 +1258,13 @@ class ChurchMemberResource extends Resource
                         }
                     })
                     ->hidden(function(ChurchMember $record){
-                        if($record->status == 'active'){
+                        if($record->status == Null || blank($record->status)){
                             return true;
                         }else{
-                            if(auth()->user()->checkPermissionTo('verify ChurchMember')){
-                                return false;
-                            }else{
+                            if(auth()->user()->checkPermissionTo('verify ChurchMember') && ($record->status == Null || blank($record->status))){
                                 return true;
+                            }else{
+                                return false;
                             }
                         }
                     }),

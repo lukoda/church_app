@@ -24,5 +24,10 @@ class CreateCard extends CreateRecord
             redirect()->to(static::getResource()::getUrl('index'));
         }
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
     
 }

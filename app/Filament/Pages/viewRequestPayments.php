@@ -53,7 +53,7 @@ class viewRequestPayments extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        if(Auth::guard('web')->user()->hasRole('Beneficiary')){
+        if(Auth::guard('web')->user()->hasRole('Beneficiary') || Auth::guard('web')->user()->hasRole('Church Secretary')){
             return true;
         }else{
             return false;
@@ -95,14 +95,17 @@ class viewRequestPayments extends Page implements HasTable
     public function mountCanAuthorizeAccess(): void
     {
         if(static::canAccess()){
-            if(BeneficiaryRequest::whereId($this->passed_record_param)->whereHas('beneficiary', function(Builder $query){
+            if(BeneficiaryRequest::whereId($this->record)->whereHas('beneficiary', function(Builder $query){
                 $query->where('phone_no', auth()->user()->phone);
             })->exists()){
                 abort_unless(static::canAccess(), 403);
-            }else{
+            }else if(Auth::guard('web')->user()->hasRole('Church Secretary')){
+                abort_unless(static::canAccess(), 403);
+            }
+            else{
                 Notification::make()
-                ->title('Page Not Found')
-                ->body('Sorry, the requested page does not exist.')
+                ->title('No Payments Registered Yet')
+                ->body('There are no payment entries registered for the beneficiary request')
                 ->danger()
                 ->send();
                 redirect()->to('/admin/view-benefeciary-request-payments');
@@ -148,7 +151,11 @@ class viewRequestPayments extends Page implements HasTable
 
     public function mount()
     {
-        $this->setRecord();
+        $id = $_REQUEST['record'];
+        if(is_numeric($id)){
+            $this->record = $id;
+        }
+        $this->setRecord($this->record);
     }
 
     public function updatedActiveTab()

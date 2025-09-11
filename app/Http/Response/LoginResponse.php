@@ -51,15 +51,24 @@ class LoginResponse implements Responsable
                             return redirect()->to('admin/members');
                         }
                      }else{
-                        if(! CardPledge::where('church_member_id', auth()->user()->churchMember->id)->exists()){
-                            Notification::make()
-                                ->warning()
-                                ->title('You haven\'t Pledged')
-                                ->body('Please enter your card pledges to complete registration')
-                                ->persistent()
-                                ->send();
-                            return redirect()->to('admin/members');
-                        }
+                        Notification::make()
+                        ->warning()
+                        ->title('You haven\'t comleted registration')
+                        ->body('Please complete your registration to be registered to '.Church::whereId(auth()->user()->church_id)->pluck('name')[0])
+                        ->persistent()
+                        ->send();
+
+                        return redirect()->to('admin/members');
+
+                        // if(! CardPledge::where('church_member_id', auth()->user()->churchMember->id)->exists()){
+                        //     Notification::make()
+                        //         ->warning()
+                        //         ->title('You haven\'t Pledged')
+                        //         ->body('Please enter your card pledges to complete registration')
+                        //         ->persistent()
+                        //         ->send();
+                        //     return redirect()->to('admin/members');
+                        // }
                      }
                      }
     
