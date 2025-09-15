@@ -5877,21 +5877,21 @@
         },
         {
             "name": "saade/filament-fullcalendar",
-            "version": "v3.2.2",
+            "version": "v3.2.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/saade/filament-fullcalendar.git",
-                "reference": "d40410e6bc46057628fb9fa8f62b6090452914d3"
+                "reference": "9dcfba69748312b5aeb5dd0281c899ffe050339c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/saade/filament-fullcalendar/zipball/d40410e6bc46057628fb9fa8f62b6090452914d3",
-                "reference": "d40410e6bc46057628fb9fa8f62b6090452914d3",
+                "url": "https://api.github.com/repos/saade/filament-fullcalendar/zipball/9dcfba69748312b5aeb5dd0281c899ffe050339c",
+                "reference": "9dcfba69748312b5aeb5dd0281c899ffe050339c",
                 "shasum": ""
             },
             "require": {
                 "filament/filament": "^3.0",
-                "illuminate/contracts": "^10.0|^11.0",
+                "illuminate/contracts": "^10.0|^11.0|^12.0",
                 "php": "^8.1",
                 "spatie/laravel-package-tools": "^1.13.5"
             },
@@ -5899,8 +5899,8 @@
                 "nunomaduro/collision": "^7.0|^8.0",
                 "nunomaduro/larastan": "^2.0",
                 "phpstan/extension-installer": "^1.1",
-                "phpstan/phpstan-deprecation-rules": "^1.0",
-                "phpstan/phpstan-phpunit": "^1.0",
+                "phpstan/phpstan-deprecation-rules": "^1.0|^2.0",
+                "phpstan/phpstan-phpunit": "^1.0|^2.0",
                 "spatie/laravel-ray": "^1.26"
             },
             "type": "library",
@@ -5939,7 +5939,7 @@
             ],
             "support": {
                 "issues": "https://github.com/saade/filament-fullcalendar/issues",
-                "source": "https://github.com/saade/filament-fullcalendar/tree/v3.2.2"
+                "source": "https://github.com/saade/filament-fullcalendar/tree/v3.2.4"
             },
             "funding": [
                 {
@@ -5947,7 +5947,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-05-02T13:04:39+00:00"
+            "time": "2025-03-10T16:44:00+00:00"
         },
         {
             "name": "sabberworm/php-css-parser",
